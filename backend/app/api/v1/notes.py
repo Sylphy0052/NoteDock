@@ -1,6 +1,7 @@
+from datetime import datetime
 from fastapi import APIRouter, Depends, Query, BackgroundTasks
 from sqlalchemy.orm import Session
-from typing import Optional, List
+from typing import Any, Optional, List
 
 from app.db.session import get_db
 from app.services.note_service import NoteService
@@ -30,7 +31,7 @@ def get_note_service(db: Session = Depends(get_db)) -> NoteService:
     return NoteService(db)
 
 
-def note_to_summary(note: any) -> NoteSummary:
+def note_to_summary(note: Any) -> NoteSummary:
     """Convert Note model to NoteSummary schema."""
     return NoteSummary(
         id=note.id,
@@ -44,7 +45,7 @@ def note_to_summary(note: any) -> NoteSummary:
     )
 
 
-def note_to_response(note: any) -> NoteResponse:
+def note_to_response(note: Any) -> NoteResponse:
     """Convert Note model to NoteResponse schema."""
     return NoteResponse(
         id=note.id,
@@ -275,7 +276,7 @@ class NoteVersionResponse(BaseModel):
     version_no: int
     title: str
     content_md: str
-    created_at: any
+    created_at: datetime
 
     class Config:
         from_attributes = True
@@ -285,7 +286,7 @@ class NoteVersionBrief(BaseModel):
     id: int
     version_no: int
     title: str
-    created_at: any
+    created_at: datetime
 
     class Config:
         from_attributes = True

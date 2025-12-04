@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, UploadFile, File, Query
 from fastapi.responses import StreamingResponse, Response
 from sqlalchemy.orm import Session
-from typing import Optional
+from typing import Any, Optional
 
 from app.db.session import get_db
 from app.services.file_service import FileService
@@ -16,7 +16,7 @@ def get_file_service(db: Session = Depends(get_db)) -> FileService:
     return FileService(db)
 
 
-def file_to_response(file: any, service: FileService) -> FileUploadResponse:
+def file_to_response(file: Any, service: FileService) -> FileUploadResponse:
     """Convert File model to response schema."""
     return FileUploadResponse(
         id=file.id,

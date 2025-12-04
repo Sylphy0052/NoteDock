@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, BackgroundTasks
 from sqlalchemy.orm import Session
-from typing import List
+from typing import Any, List
 
 from app.db.session import get_db
 from app.services.comment_service import CommentService
@@ -17,7 +17,7 @@ def get_comment_service(db: Session = Depends(get_db)) -> CommentService:
     return CommentService(db)
 
 
-def comment_to_response(comment: any) -> CommentResponse:
+def comment_to_response(comment: Any) -> CommentResponse:
     """Convert Comment model to response schema with nested replies."""
     return CommentResponse(
         id=comment.id,

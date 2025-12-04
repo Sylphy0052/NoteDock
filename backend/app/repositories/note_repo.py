@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import select, func, or_, and_
-from typing import Optional, List, Tuple
+from typing import Any, Optional, List, Tuple
 from datetime import datetime
 
 from app.models import Note, Tag, Folder
@@ -115,7 +115,7 @@ class NoteRepository:
         self.db.refresh(note)
         return note
 
-    def update(self, note: Note, **kwargs: any) -> Note:
+    def update(self, note: Note, **kwargs: Any) -> Note:
         """Update a note."""
         for key, value in kwargs.items():
             if hasattr(note, key) and value is not None:
