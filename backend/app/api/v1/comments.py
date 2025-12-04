@@ -1,10 +1,11 @@
-from fastapi import APIRouter, Depends, BackgroundTasks
+from fastapi import APIRouter, Depends, BackgroundTasks, Request
 from sqlalchemy.orm import Session
 from typing import Any, List
 
 from app.db.session import get_db
 from app.services.comment_service import CommentService
 from app.services.discord_service import get_discord_service
+from app.services.activity_log_service import ActivityLogService
 from app.repositories.note_repo import NoteRepository
 from app.schemas.comment import CommentCreate, CommentUpdate, CommentResponse
 from app.schemas.common import MessageResponse
@@ -15,6 +16,18 @@ router = APIRouter()
 
 def get_comment_service(db: Session = Depends(get_db)) -> CommentService:
     return CommentService(db)
+
+
+def get_activity_log_service(db: Session = Depends(get_db)) -> ActivityLogService:
+    return ActivityLogService(db)
+
+
+def get_client_ip(request: Request) -> str:
+    """Get client IP address from request."""
+    forwarded = request.headers.get("X-Forwarded-For")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
 
 
 def comment_to_response(comment: Any) -> CommentResponse:
@@ -45,12 +58,22 @@ def get_comments(
 async def create_comment(
     note_id: int,
     data: CommentCreate,
+    request: Request,
     background_tasks: BackgroundTasks,
     service: CommentService = Depends(get_comment_service),
+    log_service: ActivityLogService = Depends(get_activity_log_service),
     db: Session = Depends(get_db),
 ) -> CommentResponse:
     """コメントを投稿"""
     comment = service.create_comment(note_id, data)
+
+    # Log activity
+    log_service.log_comment_created(
+        comment_id=comment.id,
+        note_id=note_id,
+        display_name=comment.display_name,
+        ip_address=get_client_ip(request),
+    )
 
     # Get note title for Discord notification
     note_repo = NoteRepository(db)
@@ -77,18 +100,45 @@ async def create_comment(
 def update_comment(
     comment_id: int,
     data: CommentUpdate,
+    request: Request,
     service: CommentService = Depends(get_comment_service),
+    log_service: ActivityLogService = Depends(get_activity_log_service),
 ) -> CommentResponse:
     """コメントを編集"""
     comment = service.update_comment(comment_id, data)
+
+    # Log activity
+    log_service.log_comment_updated(
+        comment_id=comment.id,
+        note_id=comment.note_id,
+        display_name=comment.display_name,
+        ip_address=get_client_ip(request),
+    )
+
     return comment_to_response(comment)
 
 
 @router.delete("/comments/{comment_id}", response_model=MessageResponse)
 def delete_comment(
     comment_id: int,
+    request: Request,
     service: CommentService = Depends(get_comment_service),
+    log_service: ActivityLogService = Depends(get_activity_log_service),
 ) -> MessageResponse:
     """コメントを削除"""
+    # Get comment first for logging
+    comment = service.get_comment(comment_id)
+    note_id = comment.note_id
+    display_name = comment.display_name
+
     service.delete_comment(comment_id)
+
+    # Log activity
+    log_service.log_comment_deleted(
+        comment_id=comment_id,
+        note_id=note_id,
+        display_name=display_name,
+        ip_address=get_client_ip(request),
+    )
+
     return MessageResponse(message="コメントを削除しました")
