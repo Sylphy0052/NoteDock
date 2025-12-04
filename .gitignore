@@ -217,3 +217,20 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Node.js / Frontend
+node_modules/
+.pnpm-store/
+dist/
+.vite/
+*.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
