@@ -17,22 +17,13 @@ class LinkNode(BaseModel):
 
 
 class LinkEdge(BaseModel):
-    from_id: int = None
-    to_id: int = None
-
-    # Alias for JSON output
-    class Config:
-        populate_by_name = True
-
-    def model_dump(self, **kwargs):
-        d = super().model_dump(**kwargs)
-        # Rename to match spec (from/to)
-        return {"from": d["from_id"], "to": d["to_id"]}
+    from_note_id: int
+    to_note_id: int
 
 
 class LinkmapResponse(BaseModel):
     nodes: List[LinkNode]
-    edges: List[dict]  # Using dict to allow "from" key
+    edges: List[LinkEdge]
 
 
 def get_linkmap_service(db: Session = Depends(get_db)) -> LinkmapService:
@@ -47,7 +38,7 @@ def get_full_linkmap(
     graph = service.get_full_linkmap()
     return LinkmapResponse(
         nodes=[LinkNode(id=n.id, title=n.title, is_pinned=n.is_pinned) for n in graph.nodes],
-        edges=[{"from": e.from_id, "to": e.to_id} for e in graph.edges],
+        edges=[LinkEdge(from_note_id=e.from_id, to_note_id=e.to_id) for e in graph.edges],
     )
 
 
@@ -61,5 +52,5 @@ def get_neighborhood_linkmap(
     graph = service.get_neighborhood_linkmap(note_id, depth=depth)
     return LinkmapResponse(
         nodes=[LinkNode(id=n.id, title=n.title, is_pinned=n.is_pinned) for n in graph.nodes],
-        edges=[{"from": e.from_id, "to": e.to_id} for e in graph.edges],
+        edges=[LinkEdge(from_note_id=e.from_id, to_note_id=e.to_id) for e in graph.edges],
     )

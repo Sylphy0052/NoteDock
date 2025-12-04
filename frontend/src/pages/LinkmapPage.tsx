@@ -328,6 +328,20 @@ export default function LinkmapPage() {
               transformOrigin: "center center",
             }}
           >
+            {/* Arrow marker definition */}
+            <defs>
+              <marker
+                id="linkmap-arrowhead"
+                markerWidth="10"
+                markerHeight="7"
+                refX="22"
+                refY="3.5"
+                orient="auto"
+                className="linkmap-edge-arrow"
+              >
+                <polygon points="0 0, 10 3.5, 0 7" />
+              </marker>
+            </defs>
             {/* Edges */}
             <g className="linkmap-edges">
               {edges.map((edge, i) => {
@@ -342,6 +356,7 @@ export default function LinkmapPage() {
                     x2={to.x}
                     y2={to.y}
                     className="linkmap-edge"
+                    markerEnd="url(#linkmap-arrowhead)"
                   />
                 );
               })}
