@@ -55,7 +55,33 @@ NoteDock は、ノートに PDF / PPTX / 画像 / テキストファイルなど
 - npm または pnpm (フロントエンド開発時)
 - uv または Poetry (バックエンド開発時)
 
-### 起動方法
+### クイックスタート（一括起動）
+
+開発環境をすばやく起動するには、以下のコマンドを順に実行してください：
+
+```bash
+# 1. インフラ起動（PostgreSQL + MinIO）
+docker compose up -d db minio createbuckets
+
+# 2. バックエンド起動（別ターミナルで実行）
+cd backend
+uv sync
+source .venv/bin/activate
+DB_HOST=localhost DB_PORT=5432 DB_USER=notedock DB_PASSWORD=notedock DB_NAME=notedock \
+  .venv/bin/alembic upgrade head
+DB_HOST=localhost DB_PORT=5432 DB_USER=notedock DB_PASSWORD=notedock DB_NAME=notedock \
+  MINIO_ENDPOINT=localhost:9000 MINIO_ACCESS_KEY=notedock MINIO_SECRET_KEY=notedock-secret \
+  MINIO_BUCKET=notedock-files uv run uvicorn app.main:app --host 0.0.0.0 --port 8000
+
+# 3. フロントエンド起動（別ターミナルで実行）
+cd frontend
+npm install
+npm run dev
+```
+
+起動後、<http://localhost:3000> にアクセスしてください。
+
+### 起動方法（詳細）
 
 1. 環境変数の設定
 
