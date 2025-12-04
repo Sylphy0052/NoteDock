@@ -168,8 +168,8 @@ export default function NoteEditPage() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
 
-  const isNew = noteId === "new";
-  const id = isNew ? undefined : parseInt(noteId!, 10);
+  const isNew = !noteId || noteId === "new";
+  const id = isNew ? undefined : parseInt(noteId, 10);
 
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
