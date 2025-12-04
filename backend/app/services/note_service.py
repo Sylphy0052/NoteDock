@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from sqlalchemy.orm import Session
 from typing import Optional, List, Tuple
 
@@ -10,6 +12,7 @@ from app.db.base import now_jst
 
 
 MAX_VERSIONS = 50
+EDIT_LOCK_TIMEOUT_MINUTES = 30
 
 
 class NoteService:
@@ -192,3 +195,153 @@ class NoteService:
         self._create_version(note)
 
         return note
+
+    # ============================================
+    # Edit Lock Methods
+    # ============================================
+
+    def _is_lock_expired(self, note: Note) -> bool:
+        """Check if the edit lock has expired."""
+        if not note.editing_locked_at:
+            return True
+        timeout = timedelta(minutes=EDIT_LOCK_TIMEOUT_MINUTES)
+        return now_jst() > note.editing_locked_at + timeout
+
+    def check_edit_lock(self, note_id: int) -> dict:
+        """
+        Check the edit lock status of a note.
+
+        Returns:
+            dict with keys:
+            - is_locked: bool
+            - locked_by: str or None
+            - locked_at: datetime or None
+            - is_expired: bool
+        """
+        note = self.get_note(note_id)
+        is_locked = bool(note.editing_locked_by and note.editing_locked_at)
+        is_expired = self._is_lock_expired(note) if is_locked else False
+
+        # Auto-release expired lock
+        if is_locked and is_expired:
+            self._clear_edit_lock(note)
+            is_locked = False
+
+        return {
+            "is_locked": is_locked,
+            "locked_by": note.editing_locked_by if is_locked else None,
+            "locked_at": note.editing_locked_at if is_locked else None,
+            "is_expired": is_expired,
+        }
+
+    def acquire_edit_lock(
+        self, note_id: int, locked_by: str, force: bool = False
+    ) -> dict:
+        """
+        Acquire the edit lock for a note.
+
+        Args:
+            note_id: ID of the note
+            locked_by: Display name or session ID of the user
+            force: If True, ignore existing lock (used for "continue editing")
+
+        Returns:
+            dict with keys:
+            - success: bool
+            - message: str
+            - locked_by: str (current lock holder)
+        """
+        note = self.get_note(note_id)
+
+        # Check existing lock
+        has_lock = bool(note.editing_locked_by and note.editing_locked_at)
+        is_expired = self._is_lock_expired(note) if has_lock else True
+
+        # Allow acquiring lock if: no lock, expired lock, same user, or force
+        same_user = note.editing_locked_by == locked_by
+        can_acquire = not has_lock or is_expired or same_user or force
+
+        if not can_acquire:
+            return {
+                "success": False,
+                "message": f"現在 {note.editing_locked_by} さんが編集中です",
+                "locked_by": note.editing_locked_by,
+            }
+
+        # Set lock
+        note.editing_locked_by = locked_by
+        note.editing_locked_at = now_jst()
+        self.db.commit()
+        self.db.refresh(note)
+
+        return {
+            "success": True,
+            "message": "編集ロックを取得しました",
+            "locked_by": locked_by,
+        }
+
+    def release_edit_lock(self, note_id: int, locked_by: str) -> dict:
+        """
+        Release the edit lock for a note.
+
+        Args:
+            note_id: ID of the note
+            locked_by: Display name of the user releasing the lock
+
+        Returns:
+            dict with keys:
+            - success: bool
+            - message: str
+        """
+        note = self.get_note(note_id)
+
+        # Only the lock holder can release (or anyone if expired)
+        if note.editing_locked_by and note.editing_locked_by != locked_by:
+            if not self._is_lock_expired(note):
+                return {
+                    "success": False,
+                    "message": "他のユーザーのロックは解除できません",
+                }
+
+        self._clear_edit_lock(note)
+
+        return {
+            "success": True,
+            "message": "編集ロックを解除しました",
+        }
+
+    def refresh_edit_lock(self, note_id: int, locked_by: str) -> dict:
+        """
+        Refresh the edit lock (extend timeout).
+
+        Args:
+            note_id: ID of the note
+            locked_by: Display name of the user
+
+        Returns:
+            dict with keys:
+            - success: bool
+            - message: str
+        """
+        note = self.get_note(note_id)
+
+        if note.editing_locked_by != locked_by:
+            return {
+                "success": False,
+                "message": "ロック所有者ではありません",
+            }
+
+        note.editing_locked_at = now_jst()
+        self.db.commit()
+
+        return {
+            "success": True,
+            "message": "編集ロックを更新しました",
+        }
+
+    def _clear_edit_lock(self, note: Note) -> None:
+        """Clear the edit lock on a note."""
+        note.editing_locked_by = None
+        note.editing_locked_at = None
+        self.db.commit()
+        self.db.refresh(note)

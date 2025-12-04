@@ -32,7 +32,15 @@ import {
 import { MarkdownViewer } from "../components/markdown";
 import { ImageInsertModal } from "../components/editor";
 import { TemplateSelectModal, SaveAsTemplateModal } from "../components/templates";
-import { getNote, createNote, updateNote } from "../api/notes";
+import {
+  getNote,
+  createNote,
+  updateNote,
+  checkEditLock,
+  acquireEditLock,
+  releaseEditLock,
+  refreshEditLock,
+} from "../api/notes";
 import { uploadFile, getFileDownloadUrl } from "../api/files";
 import { getFolders } from "../api/folders";
 import { getSuggestedTags } from "../api/tags";
@@ -188,6 +196,61 @@ export default function NoteEditPage() {
   const [showSaveTemplateModal, setShowSaveTemplateModal] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
 
+  // Edit lock state
+  const [lockStatus, setLockStatus] = useState<{
+    isLocked: boolean;
+    lockedBy: string | null;
+    showWarning: boolean;
+  }>({ isLocked: false, lockedBy: null, showWarning: false });
+  const [displayName] = useState<string>(
+    () => localStorage.getItem("displayName") || "匿名ユーザー"
+  );
+  const lockRefreshIntervalRef = useRef<number | null>(null);
+
+  // Draft auto-save state
+  const [lastDraftSaved, setLastDraftSaved] = useState<Date | null>(null);
+  const [showDraftRecovery, setShowDraftRecovery] = useState(false);
+  const [recoveredDraft, setRecoveredDraft] = useState<{
+    title: string;
+    content: string;
+  } | null>(null);
+  const draftAutoSaveIntervalRef = useRef<number | null>(null);
+  const DRAFT_AUTO_SAVE_INTERVAL = 30 * 1000; // 30 seconds
+
+  // Draft helper functions
+  const getDraftKey = useCallback(() => {
+    return isNew ? "draft_new_note" : `draft_note_${id}`;
+  }, [isNew, id]);
+
+  const saveDraft = useCallback(() => {
+    if (!title && !content) return;
+    const draft = {
+      title,
+      content,
+      savedAt: new Date().toISOString(),
+    };
+    localStorage.setItem(getDraftKey(), JSON.stringify(draft));
+    setLastDraftSaved(new Date());
+  }, [title, content, getDraftKey]);
+
+  const loadDraft = useCallback(() => {
+    const draftStr = localStorage.getItem(getDraftKey());
+    if (draftStr) {
+      try {
+        const draft = JSON.parse(draftStr);
+        return draft;
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  }, [getDraftKey]);
+
+  const clearDraft = useCallback(() => {
+    localStorage.removeItem(getDraftKey());
+    setLastDraftSaved(null);
+  }, [getDraftKey]);
+
   // Fetch existing note
   const { data: note, isLoading } = useQuery({
     queryKey: ["note", id],
@@ -216,6 +279,56 @@ export default function NoteEditPage() {
     }
   }, [note]);
 
+  // Check for draft recovery on mount
+  useEffect(() => {
+    const draft = loadDraft();
+    if (draft) {
+      // For new notes, always check draft
+      // For existing notes, check if draft is newer or has different content
+      const shouldRecover = isNew
+        ? draft.title || draft.content
+        : note && (draft.title !== note.title || draft.content !== note.content_md);
+
+      if (shouldRecover) {
+        setRecoveredDraft({ title: draft.title, content: draft.content });
+        setShowDraftRecovery(true);
+      }
+    }
+  }, [loadDraft, isNew, note]);
+
+  // Draft auto-save interval
+  useEffect(() => {
+    // Start auto-save interval
+    draftAutoSaveIntervalRef.current = window.setInterval(() => {
+      if (isDirty) {
+        saveDraft();
+      }
+    }, DRAFT_AUTO_SAVE_INTERVAL);
+
+    return () => {
+      if (draftAutoSaveIntervalRef.current) {
+        clearInterval(draftAutoSaveIntervalRef.current);
+      }
+    };
+  }, [isDirty, saveDraft]);
+
+  // Handle draft recovery
+  const handleRecoverDraft = () => {
+    if (recoveredDraft) {
+      setTitle(recoveredDraft.title);
+      setContent(recoveredDraft.content);
+      showToast("ドラフトを復元しました", "success");
+    }
+    setShowDraftRecovery(false);
+    setRecoveredDraft(null);
+  };
+
+  const handleDiscardDraft = () => {
+    clearDraft();
+    setShowDraftRecovery(false);
+    setRecoveredDraft(null);
+  };
+
   // Mark as dirty when content changes
   useEffect(() => {
     if (note) {
@@ -243,10 +356,89 @@ export default function NoteEditPage() {
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [isDirty]);
 
+  // Edit lock: acquire on mount, release on unmount
+  useEffect(() => {
+    if (isNew || !id) return;
+
+    const tryAcquireLock = async () => {
+      try {
+        // First check if already locked
+        const status = await checkEditLock(id);
+        if (status.is_locked && status.locked_by !== displayName) {
+          setLockStatus({
+            isLocked: true,
+            lockedBy: status.locked_by,
+            showWarning: true,
+          });
+          return;
+        }
+
+        // Try to acquire lock
+        const result = await acquireEditLock(id, displayName);
+        if (!result.success) {
+          setLockStatus({
+            isLocked: true,
+            lockedBy: result.locked_by || null,
+            showWarning: true,
+          });
+        } else {
+          setLockStatus({ isLocked: false, lockedBy: null, showWarning: false });
+          // Start refresh interval (every 10 minutes)
+          lockRefreshIntervalRef.current = window.setInterval(async () => {
+            try {
+              await refreshEditLock(id, displayName);
+            } catch (err) {
+              console.error("Failed to refresh edit lock:", err);
+            }
+          }, 10 * 60 * 1000);
+        }
+      } catch (err) {
+        console.error("Failed to check/acquire edit lock:", err);
+      }
+    };
+
+    tryAcquireLock();
+
+    // Cleanup: release lock on unmount
+    return () => {
+      if (lockRefreshIntervalRef.current) {
+        clearInterval(lockRefreshIntervalRef.current);
+      }
+      if (id && !lockStatus.showWarning) {
+        releaseEditLock(id, displayName).catch((err) =>
+          console.error("Failed to release edit lock:", err)
+        );
+      }
+    };
+  }, [id, isNew, displayName]);
+
+  // Handle force acquire lock (ignore warning)
+  const handleForceAcquireLock = async () => {
+    if (!id) return;
+    try {
+      const result = await acquireEditLock(id, displayName, true);
+      if (result.success) {
+        setLockStatus({ isLocked: false, lockedBy: null, showWarning: false });
+        showToast("編集ロックを取得しました", "success");
+        // Start refresh interval
+        lockRefreshIntervalRef.current = window.setInterval(async () => {
+          try {
+            await refreshEditLock(id, displayName);
+          } catch (err) {
+            console.error("Failed to refresh edit lock:", err);
+          }
+        }, 10 * 60 * 1000);
+      }
+    } catch (err) {
+      showToast("ロックの取得に失敗しました", "error");
+    }
+  };
+
   // Create mutation
   const createMutation = useMutation({
     mutationFn: (data: NoteCreate) => createNote(data),
     onSuccess: (data) => {
+      clearDraft(); // Clear draft after successful save
       queryClient.invalidateQueries({ queryKey: ["notes"] });
       showToast("ノートを作成しました", "success");
       navigate(`/notes/${data.id}`);
@@ -260,6 +452,7 @@ export default function NoteEditPage() {
   const updateMutation = useMutation({
     mutationFn: (data: NoteUpdate) => updateNote(id!, data),
     onSuccess: (data) => {
+      clearDraft(); // Clear draft after successful save
       queryClient.invalidateQueries({ queryKey: ["notes"] });
       queryClient.setQueryData(["note", id], data);
       setIsDirty(false);
@@ -484,14 +677,90 @@ export default function NoteEditPage() {
     );
   }
 
+  // Show edit lock warning (another user is editing)
+  if (lockStatus.showWarning) {
+    return (
+      <div className="note-edit-page">
+        <div className="edit-lock-warning">
+          <div className="lock-warning-icon warning">
+            <AlertTriangle size={48} />
+          </div>
+          <h2>現在他のユーザーが編集中です</h2>
+          <p>
+            <strong>{lockStatus.lockedBy}</strong> さんがこのノートを編集しています。
+          </p>
+          <p className="lock-warning-hint">
+            閲覧のみ行うか、ロックを無視して編集を続行することができます。
+            続行した場合、変更が競合する可能性があります。
+          </p>
+          <div className="lock-warning-actions">
+            <Link to={`/notes/${id}`} className="btn btn-primary">
+              <Eye size={18} />
+              閲覧のみ
+            </Link>
+            <button
+              className="btn btn-warning"
+              onClick={handleForceAcquireLock}
+            >
+              <AlertTriangle size={18} />
+              ロックを無視して編集
+            </button>
+            <Link to="/notes" className="btn btn-secondary">
+              ノート一覧へ戻る
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="note-edit-page">
+      {/* Draft Recovery Modal */}
+      {showDraftRecovery && (
+        <div className="modal-overlay">
+          <div className="modal draft-recovery-modal">
+            <header className="modal-header">
+              <h2>
+                <FileText size={20} />
+                未保存のドラフトがあります
+              </h2>
+            </header>
+            <div className="modal-body">
+              <p>前回編集中のドラフトが見つかりました。復元しますか？</p>
+              {recoveredDraft && (
+                <div className="draft-preview">
+                  <strong>タイトル:</strong> {recoveredDraft.title || "(無題)"}
+                  <br />
+                  <strong>内容:</strong>{" "}
+                  {recoveredDraft.content.substring(0, 100)}
+                  {recoveredDraft.content.length > 100 ? "..." : ""}
+                </div>
+              )}
+            </div>
+            <footer className="modal-footer">
+              <button className="btn btn-secondary" onClick={handleDiscardDraft}>
+                破棄する
+              </button>
+              <button className="btn btn-primary" onClick={handleRecoverDraft}>
+                復元する
+              </button>
+            </footer>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <header className="edit-header">
         <div className="edit-breadcrumb">
           <Link to="/notes">ノート</Link>
           <ChevronRight size={16} />
           <span>{isNew ? "新規作成" : "編集"}</span>
+          {lastDraftSaved && (
+            <span className="draft-saved-indicator" title="最終ドラフト保存時刻">
+              (ドラフト保存: {lastDraftSaved.toLocaleTimeString()})
+            </span>
+          )}
         </div>
 
         <div className="edit-actions">

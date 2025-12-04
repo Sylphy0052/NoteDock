@@ -35,6 +35,13 @@ class Note(Base, TimestampMixin):
     deleted_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    # Editing lock fields
+    editing_locked_by: Mapped[Optional[str]] = mapped_column(
+        String(100), nullable=True
+    )
+    editing_locked_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
     # Relationships
     folder: Mapped[Optional["Folder"]] = relationship(

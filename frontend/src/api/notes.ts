@@ -156,3 +156,62 @@ export async function restoreNoteVersion(
   );
   return data;
 }
+
+// ============================================
+// Edit Lock APIs
+// ============================================
+
+export interface EditLockStatus {
+  is_locked: boolean;
+  locked_by: string | null;
+  locked_at: string | null;
+}
+
+export interface EditLockResponse {
+  success: boolean;
+  message: string;
+  locked_by?: string;
+}
+
+// Check edit lock status
+export async function checkEditLock(noteId: number): Promise<EditLockStatus> {
+  const { data } = await apiClient.get<EditLockStatus>(`/notes/${noteId}/lock`);
+  return data;
+}
+
+// Acquire edit lock
+export async function acquireEditLock(
+  noteId: number,
+  lockedBy: string,
+  force: boolean = false
+): Promise<EditLockResponse> {
+  const { data } = await apiClient.post<EditLockResponse>(
+    `/notes/${noteId}/lock`,
+    { locked_by: lockedBy, force }
+  );
+  return data;
+}
+
+// Release edit lock
+export async function releaseEditLock(
+  noteId: number,
+  lockedBy: string
+): Promise<EditLockResponse> {
+  const { data } = await apiClient.delete<EditLockResponse>(
+    `/notes/${noteId}/lock`,
+    { params: { locked_by: lockedBy } }
+  );
+  return data;
+}
+
+// Refresh edit lock (extend timeout)
+export async function refreshEditLock(
+  noteId: number,
+  lockedBy: string
+): Promise<EditLockResponse> {
+  const { data } = await apiClient.patch<EditLockResponse>(
+    `/notes/${noteId}/lock/refresh`,
+    { locked_by: lockedBy }
+  );
+  return data;
+}

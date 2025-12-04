@@ -1,11 +1,13 @@
 from datetime import datetime
-from fastapi import APIRouter, Depends, Query, BackgroundTasks
+from fastapi import APIRouter, Depends, Query, BackgroundTasks, Request
 from sqlalchemy.orm import Session
 from typing import Any, Optional, List
 
 from app.db.session import get_db
 from app.services.note_service import NoteService
 from app.services.discord_service import get_discord_service
+from app.services.activity_log_service import ActivityLogService
+from app.services.linkmap_service import LinkmapService
 from app.schemas.note import (
     NoteCreate,
     NoteUpdate,
@@ -29,6 +31,22 @@ router = APIRouter()
 
 def get_note_service(db: Session = Depends(get_db)) -> NoteService:
     return NoteService(db)
+
+
+def get_activity_log_service(db: Session = Depends(get_db)) -> ActivityLogService:
+    return ActivityLogService(db)
+
+
+def get_linkmap_service(db: Session = Depends(get_db)) -> LinkmapService:
+    return LinkmapService(db)
+
+
+def get_client_ip(request: Request) -> str:
+    """Get client IP address from request."""
+    forwarded = request.headers.get("X-Forwarded-For")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
 
 
 def note_to_summary(note: Any) -> NoteSummary:
@@ -116,11 +134,24 @@ def get_note(
 @router.post("/notes", response_model=NoteResponse, status_code=201)
 async def create_note(
     data: NoteCreate,
+    request: Request,
     background_tasks: BackgroundTasks,
     service: NoteService = Depends(get_note_service),
+    log_service: ActivityLogService = Depends(get_activity_log_service),
+    linkmap_service: LinkmapService = Depends(get_linkmap_service),
 ) -> NoteResponse:
     """ノートを作成"""
     note = service.create_note(data)
+
+    # Update note links for linkmap
+    if data.content_md:
+        linkmap_service.update_note_links(note.id, data.content_md)
+
+    # Log activity
+    log_service.log_note_created(
+        note_id=note.id,
+        ip_address=get_client_ip(request),
+    )
 
     # Discord notification (background task)
     discord_service = get_discord_service()
@@ -137,11 +168,24 @@ async def create_note(
 async def update_note(
     note_id: int,
     data: NoteUpdate,
+    request: Request,
     background_tasks: BackgroundTasks,
     service: NoteService = Depends(get_note_service),
+    log_service: ActivityLogService = Depends(get_activity_log_service),
+    linkmap_service: LinkmapService = Depends(get_linkmap_service),
 ) -> NoteResponse:
     """ノートを更新"""
     note = service.update_note(note_id, data)
+
+    # Update note links for linkmap
+    if data.content_md is not None:
+        linkmap_service.update_note_links(note.id, data.content_md)
+
+    # Log activity
+    log_service.log_note_updated(
+        note_id=note.id,
+        ip_address=get_client_ip(request),
+    )
 
     # Discord notification (background task)
     discord_service = get_discord_service()
@@ -157,20 +201,38 @@ async def update_note(
 @router.delete("/notes/{note_id}", response_model=MessageResponse)
 def delete_note(
     note_id: int,
+    request: Request,
     service: NoteService = Depends(get_note_service),
+    log_service: ActivityLogService = Depends(get_activity_log_service),
 ) -> MessageResponse:
     """ノートをゴミ箱に移動"""
     service.delete_note(note_id)
+
+    # Log activity
+    log_service.log_note_deleted(
+        note_id=note_id,
+        ip_address=get_client_ip(request),
+    )
+
     return MessageResponse(message="ノートをゴミ箱に移動しました")
 
 
 @router.post("/notes/{note_id}/restore", response_model=NoteResponse)
 def restore_note(
     note_id: int,
+    request: Request,
     service: NoteService = Depends(get_note_service),
+    log_service: ActivityLogService = Depends(get_activity_log_service),
 ) -> NoteResponse:
     """ノートをゴミ箱から復元"""
     note = service.restore_note(note_id)
+
+    # Log activity
+    log_service.log_note_restored(
+        note_id=note.id,
+        ip_address=get_client_ip(request),
+    )
+
     return note_to_response(note)
 
 
@@ -187,10 +249,19 @@ def permanent_delete_note(
 @router.post("/notes/{note_id}/duplicate", response_model=NoteResponse, status_code=201)
 def duplicate_note(
     note_id: int,
+    request: Request,
     service: NoteService = Depends(get_note_service),
+    log_service: ActivityLogService = Depends(get_activity_log_service),
 ) -> NoteResponse:
     """ノートを複製"""
     note = service.duplicate_note(note_id)
+
+    # Log activity
+    log_service.log_note_duplicated(
+        note_id=note.id,
+        ip_address=get_client_ip(request),
+    )
+
     return note_to_response(note)
 
 
@@ -331,8 +402,102 @@ def get_note_version(
 def restore_note_version(
     note_id: int,
     version_no: int,
+    request: Request,
     service: NoteService = Depends(get_note_service),
+    log_service: ActivityLogService = Depends(get_activity_log_service),
 ) -> NoteResponse:
     """特定バージョンに復元"""
     note = service.restore_version(note_id, version_no)
+
+    # Log activity
+    log_service.log_version_restored(
+        note_id=note.id,
+        ip_address=get_client_ip(request),
+    )
+
     return note_to_response(note)
+
+
+# ============================================
+# Edit Lock Endpoints
+# ============================================
+
+class EditLockRequest(BaseModel):
+    """Request body for edit lock operations."""
+    locked_by: str
+    force: bool = False
+
+
+class EditLockResponse(BaseModel):
+    """Response for edit lock operations."""
+    success: bool
+    message: str
+    locked_by: Optional[str] = None
+
+
+class EditLockStatusResponse(BaseModel):
+    """Response for edit lock status check."""
+    is_locked: bool
+    locked_by: Optional[str] = None
+    locked_at: Optional[datetime] = None
+
+
+@router.get("/notes/{note_id}/lock", response_model=EditLockStatusResponse)
+def check_edit_lock(
+    note_id: int,
+    service: NoteService = Depends(get_note_service),
+) -> EditLockStatusResponse:
+    """編集ロック状態を確認"""
+    result = service.check_edit_lock(note_id)
+    return EditLockStatusResponse(
+        is_locked=result["is_locked"],
+        locked_by=result["locked_by"],
+        locked_at=result["locked_at"],
+    )
+
+
+@router.post("/notes/{note_id}/lock", response_model=EditLockResponse)
+def acquire_edit_lock(
+    note_id: int,
+    data: EditLockRequest,
+    service: NoteService = Depends(get_note_service),
+) -> EditLockResponse:
+    """編集ロックを取得"""
+    result = service.acquire_edit_lock(
+        note_id=note_id,
+        locked_by=data.locked_by,
+        force=data.force,
+    )
+    return EditLockResponse(
+        success=result["success"],
+        message=result["message"],
+        locked_by=result.get("locked_by"),
+    )
+
+
+@router.delete("/notes/{note_id}/lock", response_model=EditLockResponse)
+def release_edit_lock(
+    note_id: int,
+    locked_by: str = Query(..., description="ロック所有者の表示名"),
+    service: NoteService = Depends(get_note_service),
+) -> EditLockResponse:
+    """編集ロックを解除"""
+    result = service.release_edit_lock(note_id=note_id, locked_by=locked_by)
+    return EditLockResponse(
+        success=result["success"],
+        message=result["message"],
+    )
+
+
+@router.patch("/notes/{note_id}/lock/refresh", response_model=EditLockResponse)
+def refresh_edit_lock(
+    note_id: int,
+    data: EditLockRequest,
+    service: NoteService = Depends(get_note_service),
+) -> EditLockResponse:
+    """編集ロックを更新（タイムアウト延長）"""
+    result = service.refresh_edit_lock(note_id=note_id, locked_by=data.locked_by)
+    return EditLockResponse(
+        success=result["success"],
+        message=result["message"],
+    )
