@@ -2095,8 +2095,20 @@ button {
 }
 
 .linkmap-edge {
-  stroke: var(--color-border);
+  stroke: var(--color-primary);
   stroke-width: 2;
+  stroke-opacity: 0.6;
+  transition: stroke-opacity 0.2s, stroke-width 0.2s;
+}
+
+.linkmap-edge:hover {
+  stroke-opacity: 1;
+  stroke-width: 3;
+}
+
+.linkmap-edge-arrow {
+  fill: var(--color-primary);
+  fill-opacity: 0.6;
 }
 
 .linkmap-node {
