@@ -25,6 +25,11 @@ export function getFileUrl(fileId: number): string {
   return `${apiClient.defaults.baseURL}/files/${fileId}`;
 }
 
+// Alias for backward compatibility
+export async function getFileDownloadUrl(fileId: number): Promise<string> {
+  return getFileUrl(fileId);
+}
+
 // Get file preview URL
 export function getFilePreviewUrl(fileId: number): string {
   return `${apiClient.defaults.baseURL}/files/${fileId}/preview`;

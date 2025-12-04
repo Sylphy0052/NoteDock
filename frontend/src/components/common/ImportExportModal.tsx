@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Download, Upload, FileArchive, AlertCircle, CheckCircle, X } from "lucide-react";
-import { Modal } from "./Modal";
+import Modal from "./Modal";
 import { useToast } from "./Toast";
 import { exportNotes, importNotes } from "../../api/importExport";
 import type { ImportResult } from "../../api/types";

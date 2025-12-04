@@ -14,3 +14,6 @@ export async function getTagSuggestions(query: string): Promise<Tag[]> {
   });
   return data;
 }
+
+// Alias for backward compatibility
+export const getSuggestedTags = getTagSuggestions;
