@@ -50,82 +50,70 @@ NoteDock は、ノートに PDF / PPTX / 画像 / テキストファイルなど
 ### 必要条件
 
 - Docker & Docker Compose
-- Node.js 20+ (開発時)
-- Python >=3.11 (開発時)
-- npm または pnpm (フロントエンド開発時)
-- uv または Poetry (バックエンド開発時)
 
-### クイックスタート（一括起動）
+### クイックスタート（Docker）
 
-開発環境をすばやく起動するには、以下のコマンドを順に実行してください：
+リポジトリをクローンして開発環境を起動するには：
 
 ```bash
-# 1. インフラ起動（PostgreSQL + MinIO）
-docker compose up -d db minio createbuckets
+# 1. リポジトリをクローン
+git clone https://github.com/your-username/NoteDock.git
+cd NoteDock
 
-# 2. バックエンド起動（別ターミナルで実行）
+# 2. 開発環境起動スクリプトを実行
+./scripts/start-dev.sh
+```
+
+スクリプトが全てのサービス（PostgreSQL、MinIO、バックエンド、フロントエンド）を Docker コンテナで起動します。
+
+起動後のアクセス先：
+
+- Frontend: <http://localhost:3000>
+- Backend API: <http://localhost:8000>
+- API Docs: <http://localhost:8000/api/docs>
+- MinIO Console: <http://localhost:9001>
+
+便利なコマンド：
+
+```bash
+# ログ確認
+docker compose logs -f
+
+# 停止
+docker compose down
+
+# 再起動
+docker compose restart
+```
+
+### ローカル開発（Docker外）
+
+Docker を使わずにローカルで開発する場合：
+
+**必要条件：**
+
+- Node.js 20+
+- Python >=3.11
+- uv (推奨) または Poetry
+
+```bash
+# 1. インフラのみ Docker で起動
+docker compose up -d db minio minio-init
+
+# 2. バックエンド起動（別ターミナル）
 cd backend
 uv sync
-source .venv/bin/activate
 DB_HOST=localhost DB_PORT=5432 DB_USER=notedock DB_PASSWORD=notedock DB_NAME=notedock \
   .venv/bin/alembic upgrade head
 DB_HOST=localhost DB_PORT=5432 DB_USER=notedock DB_PASSWORD=notedock DB_NAME=notedock \
   MINIO_ENDPOINT=localhost:9000 MINIO_ACCESS_KEY=notedock MINIO_SECRET_KEY=notedock-secret \
-  MINIO_BUCKET=notedock-files uv run uvicorn app.main:app --host 0.0.0.0 --port 8000
+  MINIO_BUCKET=notedock-files uv run uvicorn app.main:app --reload --port 8000
 
-# 3. フロントエンド起動（別ターミナルで実行）
+# 3. フロントエンド起動（別ターミナル）
 cd frontend
 npm install
 npm run dev
 ```
-
-起動後、<http://localhost:3000> にアクセスしてください。
-
-### 起動方法（詳細）
-
-1. 環境変数の設定
-
-    ```bash
-    cp .env.example .env
-    ```
-
-2. Docker Compose でデータベース・ストレージを起動
-
-    ```bash
-    docker compose up -d db minio createbuckets
-    ```
-
-3. バックエンド起動
-
-    ```bash
-    cd backend
-
-    # uv を使用する場合（推奨）
-    uv venv
-    source .venv/bin/activate
-    uv pip install -e .
-    alembic upgrade head
-    uvicorn app.main:app --reload --port 8000
-
-    # Poetry を使用する場合
-    poetry install
-    poetry run alembic upgrade head
-    poetry run uvicorn app.main:app --reload --port 8000
-    ```
-
-4. フロントエンド起動
-
-    ```bash
-    cd frontend
-    npm install
-    npm run dev
-    ```
-
-5. アクセス
-    - Frontend: <http://localhost:3000>
-    - Backend API: <http://localhost:8000>
-    - API Docs: <http://localhost:8000/api/docs>
-    - MinIO Console: <http://localhost:9001>
 
 ## 開発
 
