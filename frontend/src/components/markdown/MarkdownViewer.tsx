@@ -1,8 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
 import mermaid from "mermaid";
+import { NoteLinkHoverCard } from "../notes/NoteLinkHoverCard";
+import { getNoteSummary } from "../../api/notes";
 
 // Initialize mermaid with configuration
 mermaid.initialize({
@@ -89,6 +91,66 @@ function CodeBlock({
   );
 }
 
+// Extract note IDs from [#ID] pattern
+function extractNoteLinkIds(content: string): number[] {
+  const pattern = /\[#(\d+)\]/g;
+  const ids: number[] = [];
+  let match;
+  while ((match = pattern.exec(content)) !== null) {
+    const id = parseInt(match[1], 10);
+    if (!ids.includes(id)) {
+      ids.push(id);
+    }
+  }
+  return ids;
+}
+
+// Hook to fetch note titles for [#ID] pattern replacement
+function useNoteTitles(noteIds: number[]) {
+  const [titles, setTitles] = useState<Map<number, string>>(new Map());
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (noteIds.length === 0) return;
+
+    const fetchTitles = async () => {
+      setLoading(true);
+      const newTitles = new Map<number, string>();
+
+      await Promise.all(
+        noteIds.map(async (id) => {
+          try {
+            const summary = await getNoteSummary(id);
+            newTitles.set(id, summary.title);
+          } catch {
+            // If note doesn't exist, use fallback
+            newTitles.set(id, `#${id}`);
+          }
+        })
+      );
+
+      setTitles(newTitles);
+      setLoading(false);
+    };
+
+    fetchTitles();
+  }, [noteIds.join(",")]); // Re-fetch when IDs change
+
+  return { titles, loading };
+}
+
+// Replace [#ID] patterns with [タイトル](/notes/ID) format
+function replaceNoteLinkPatterns(
+  content: string,
+  titles: Map<number, string>
+): string {
+  return content.replace(/\[#(\d+)\]/g, (match, idStr) => {
+    const id = parseInt(idStr, 10);
+    const title = titles.get(id) || `#${id}`;
+    return `[${title}](/notes/${id})`;
+  });
+}
+
 // Sanitize HTML by stripping dangerous tags and attributes
 function sanitizeContent(content: string): string {
   // Remove script tags
@@ -121,6 +183,27 @@ function sanitizeContent(content: string): string {
   return sanitized;
 }
 
+// Custom heading component to add anchor IDs for TOC navigation
+function HeadingComponent({
+  level,
+  children,
+  ...props
+}: {
+  level: number;
+  children: React.ReactNode;
+}) {
+  // Generate ID from heading text (matching backend format)
+  const text = String(children);
+  const id = text.replace(/:\s*/g, "-").replace(/\s+/g, "-");
+
+  const Tag = `h${level}` as keyof JSX.IntrinsicElements;
+  return (
+    <Tag id={id} {...props}>
+      {children}
+    </Tag>
+  );
+}
+
 // Custom link component to open external links in new tab
 function LinkComponent({
   href,
@@ -130,13 +213,28 @@ function LinkComponent({
   href?: string;
   children: React.ReactNode;
 }) {
-  // Handle internal note links (#123)
+  // Handle internal note links (#123 format)
   if (href?.startsWith("#") && /^#\d+$/.test(href)) {
-    const noteId = href.slice(1);
+    const noteId = parseInt(href.slice(1), 10);
     return (
-      <a href={`/notes/${noteId}`} className="note-link" {...props}>
-        {children}
-      </a>
+      <NoteLinkHoverCard noteId={noteId}>
+        <a href={`/notes/${noteId}`} className="note-link" {...props}>
+          {children}
+        </a>
+      </NoteLinkHoverCard>
+    );
+  }
+
+  // Handle internal note links (/notes/ID format - from [#ID] conversion)
+  const notePathMatch = href?.match(/^\/notes\/(\d+)$/);
+  if (notePathMatch) {
+    const noteId = parseInt(notePathMatch[1], 10);
+    return (
+      <NoteLinkHoverCard noteId={noteId}>
+        <a href={href} className="note-link" {...props}>
+          {children}
+        </a>
+      </NoteLinkHoverCard>
     );
   }
 
@@ -159,8 +257,20 @@ function LinkComponent({
 }
 
 export function MarkdownViewer({ content, className }: MarkdownViewerProps) {
-  // Sanitize content before rendering
-  const sanitizedContent = sanitizeContent(content);
+  // Extract note IDs from [#ID] patterns
+  const noteIds = useMemo(() => extractNoteLinkIds(content), [content]);
+
+  // Fetch titles for extracted note IDs
+  const { titles, loading: titlesLoading } = useNoteTitles(noteIds);
+
+  // Process content: replace [#ID] with [title](/notes/ID), then sanitize
+  const processedContent = useMemo(() => {
+    let processed = content;
+    if (titles.size > 0) {
+      processed = replaceNoteLinkPatterns(processed, titles);
+    }
+    return sanitizeContent(processed);
+  }, [content, titles]);
 
   return (
     <div className={`markdown-content ${className || ""}`}>
@@ -170,9 +280,15 @@ export function MarkdownViewer({ content, className }: MarkdownViewerProps) {
         components={{
           code: CodeBlock as any,
           a: LinkComponent as any,
+          h1: (props) => <HeadingComponent level={1} {...props} />,
+          h2: (props) => <HeadingComponent level={2} {...props} />,
+          h3: (props) => <HeadingComponent level={3} {...props} />,
+          h4: (props) => <HeadingComponent level={4} {...props} />,
+          h5: (props) => <HeadingComponent level={5} {...props} />,
+          h6: (props) => <HeadingComponent level={6} {...props} />,
         }}
       >
-        {sanitizedContent}
+        {processedContent}
       </ReactMarkdown>
     </div>
   );
