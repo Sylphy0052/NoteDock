@@ -30,7 +30,7 @@ import {
   MoreVertical,
 } from "lucide-react";
 import { MarkdownViewer } from "../components/markdown";
-import { ImageInsertModal } from "../components/editor";
+import { ImageInsertModal, NoteLinkSuggester } from "../components/editor";
 import { TemplateSelectModal, SaveAsTemplateModal } from "../components/templates";
 import {
   getNote,
@@ -543,6 +543,37 @@ export default function NoteEditPage() {
     setShowImageModal(false);
   };
 
+  // Handle note link insertion from suggester
+  const handleNoteLinkInsert = useCallback(
+    (noteId: number, noteTitle: string) => {
+      const textarea = textareaRef.current;
+      if (!textarea) return;
+
+      const cursorPos = textarea.selectionStart;
+      const textBeforeCursor = content.substring(0, cursorPos);
+
+      // Find the [# pattern to replace
+      const triggerMatch = textBeforeCursor.match(/\[#([^\]\s]*)$/);
+      if (triggerMatch) {
+        const startPos = cursorPos - triggerMatch[0].length;
+        const newContent =
+          content.substring(0, startPos) +
+          `[#${noteId}]` +
+          content.substring(cursorPos);
+
+        setContent(newContent);
+
+        // Move cursor after the inserted link
+        setTimeout(() => {
+          const newCursorPos = startPos + `[#${noteId}]`.length;
+          textarea.focus();
+          textarea.setSelectionRange(newCursorPos, newCursorPos);
+        }, 0);
+      }
+    },
+    [content]
+  );
+
   const handleTemplateSelect = (templateContent: string) => {
     setContent(templateContent);
     setShowTemplateModal(false);
@@ -775,11 +806,12 @@ export default function NoteEditPage() {
             </button>
           )}
           <button
-            className={`btn btn-icon ${showPreview ? "active" : ""}`}
+            className={`btn btn-secondary ${showPreview ? "active" : ""}`}
             onClick={() => setShowPreview(!showPreview)}
-            title="プレビュー"
+            title={showPreview ? "編集モードに切り替え" : "プレビューモードに切り替え"}
           >
             {showPreview ? <EditIcon size={18} /> : <Eye size={18} />}
+            {showPreview ? "編集" : "プレビュー"}
           </button>
           <button
             className="btn btn-primary"
@@ -937,13 +969,20 @@ export default function NoteEditPage() {
               onDrop={handleDrop}
             >
               <EditorToolbar onInsert={insertText} onUploadImage={handleOpenImageModal} />
-              <textarea
-                ref={textareaRef}
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                placeholder="Markdownで入力..."
-                className="content-textarea"
-              />
+              <div className="textarea-wrapper">
+                <textarea
+                  ref={textareaRef}
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  placeholder="Markdownで入力...&#10;&#10;ヒント: [# と入力するとノートリンクを挿入できます"
+                  className="content-textarea"
+                />
+                <NoteLinkSuggester
+                  textareaRef={textareaRef}
+                  content={content}
+                  onInsertLink={handleNoteLinkInsert}
+                />
+              </div>
               {isDragging && (
                 <div className="drop-overlay">
                   <Upload size={48} />
