@@ -11,11 +11,12 @@ from sqlalchemy.pool import StaticPool
 os.environ["APP_ENV"] = "test"
 os.environ["APP_DEBUG"] = "false"
 os.environ["DATABASE_URL"] = "sqlite:///:memory:"
-os.environ["MINIO_ENDPOINT"] = "localhost:9000"
-os.environ["MINIO_ACCESS_KEY"] = "test"
-os.environ["MINIO_SECRET_KEY"] = "test"
-os.environ["MINIO_BUCKET"] = "test"
-os.environ["DISCORD_WEBHOOK_URL"] = ""
+# Use environment variables if set, otherwise use defaults for unit tests
+os.environ.setdefault("MINIO_ENDPOINT", "localhost:9000")
+os.environ.setdefault("MINIO_ACCESS_KEY", "notedock")
+os.environ.setdefault("MINIO_SECRET_KEY", "notedock-secret")
+os.environ.setdefault("MINIO_BUCKET", "notedock-files")
+os.environ.setdefault("DISCORD_WEBHOOK_URL", "")
 
 from app.db.base import Base
 from app.db.session import get_db

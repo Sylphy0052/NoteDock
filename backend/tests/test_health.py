@@ -84,7 +84,8 @@ class TestSearchAPI:
 
         assert response.status_code == 200
         data = response.json()
-        assert "items" in data
+        # API returns a list directly, not wrapped in "items"
+        assert isinstance(data, list)
 
     def test_search_with_tag_filter(
         self, client: TestClient, sample_note_data: dict
@@ -211,7 +212,8 @@ class TestTagsAPI:
         data = response.json()
         assert isinstance(data, list)
         # Should match tags starting with "suggest"
+        # API returns TagResponse objects with "name" field
         for tag in data:
-            if "suggest" in tag.lower():
+            if "suggest" in tag["name"].lower():
                 assert True
                 return
