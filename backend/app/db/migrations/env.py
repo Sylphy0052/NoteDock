@@ -16,6 +16,8 @@ from app.models import (  # noqa: F401 - Import all models to register them
     Comment,
     NoteLink,
     ActivityLog,
+    Template,
+    NoteDraft,
 )
 
 # this is the Alembic Config object, which provides

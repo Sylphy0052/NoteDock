@@ -65,6 +65,8 @@ from app.api.v1 import (
     linkmap_router,
     search_router,
     import_export_router,
+    templates_router,
+    drafts_router,
 )
 
 app.include_router(notes_router, prefix="/api", tags=["notes"])
@@ -75,3 +77,5 @@ app.include_router(comments_router, prefix="/api", tags=["comments"])
 app.include_router(linkmap_router, prefix="/api", tags=["linkmap"])
 app.include_router(search_router, prefix="/api", tags=["search"])
 app.include_router(import_export_router, prefix="/api", tags=["import_export"])
+app.include_router(templates_router, prefix="/api", tags=["templates"])
+app.include_router(drafts_router, prefix="/api", tags=["drafts"])

@@ -6,6 +6,8 @@ from app.api.v1.comments import router as comments_router
 from app.api.v1.linkmap import router as linkmap_router
 from app.api.v1.search import router as search_router
 from app.api.v1.import_export import router as import_export_router
+from app.api.v1.templates import router as templates_router
+from app.api.v1.drafts import router as drafts_router
 
 __all__ = [
     "notes_router",
@@ -16,4 +18,6 @@ __all__ = [
     "linkmap_router",
     "search_router",
     "import_export_router",
+    "templates_router",
+    "drafts_router",
 ]

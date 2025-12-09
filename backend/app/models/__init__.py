@@ -6,6 +6,8 @@ from app.models.note_version import NoteVersion
 from app.models.comment import Comment
 from app.models.note_link import NoteLink
 from app.models.activity_log import ActivityLog, EventType
+from app.models.template import Template
+from app.models.note_draft import NoteDraft
 
 __all__ = [
     "Folder",
@@ -19,4 +21,6 @@ __all__ = [
     "NoteLink",
     "ActivityLog",
     "EventType",
+    "Template",
+    "NoteDraft",
 ]
