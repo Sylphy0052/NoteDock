@@ -22,7 +22,7 @@ NoteDock は、ノートに PDF / PPTX / 画像 / テキストファイルなど
 | クイックオープン | ✅ | Ctrl+K でノート検索 |
 | テーマ切替 | ✅ | ライト/ダークモード |
 | インポート/エクスポート | ✅ | ZIP 形式での一括入出力 |
-| フォルダ管理 | 🚧 | フォルダによるノート整理（開発中） |
+| フォルダ管理 | ✅ | フォルダによるノート整理（ツリー構造、最大3階層） |
 
 ## 技術スタック
 
@@ -203,6 +203,10 @@ notedock/
 | GET | /api/tags | タグ一覧 |
 | POST | /api/files/upload | ファイルアップロード |
 | GET | /api/linkmap | リンクマップデータ |
+| GET | /api/folders | フォルダ一覧（ツリー構造） |
+| POST | /api/folders | フォルダ作成 |
+| PUT | /api/folders/{id} | フォルダ更新 |
+| DELETE | /api/folders/{id} | フォルダ削除 |
 
 詳細は `/api/docs` の Swagger UI を参照してください。
 
