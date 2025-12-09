@@ -5,3 +5,4 @@ export { default as NoteEditPage } from "./NoteEditPage";
 export { default as TrashPage } from "./TrashPage";
 export { default as LinkmapPage } from "./LinkmapPage";
 export { default as TagsPage } from "./TagsPage";
+export { default as FoldersPage } from "./FoldersPage";

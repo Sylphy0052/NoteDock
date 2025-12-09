@@ -8,6 +8,7 @@ import {
   TrashPage,
   LinkmapPage,
   TagsPage,
+  FoldersPage,
 } from "./pages";
 
 export function AppRouter() {
@@ -19,6 +20,7 @@ export function AppRouter() {
         <Route path="/notes/new" element={<NoteEditPage />} />
         <Route path="/notes/:noteId" element={<NoteDetailPage />} />
         <Route path="/notes/:noteId/edit" element={<NoteEditPage />} />
+        <Route path="/folders" element={<FoldersPage />} />
         <Route path="/trash" element={<TrashPage />} />
         <Route path="/linkmap" element={<LinkmapPage />} />
         <Route path="/tags" element={<TagsPage />} />
