@@ -183,6 +183,30 @@ function sanitizeContent(content: string): string {
   return sanitized;
 }
 
+// Extract text content from React children recursively
+function extractTextFromChildren(children: React.ReactNode): string {
+  if (typeof children === "string") return children;
+  if (typeof children === "number") return String(children);
+  if (Array.isArray(children)) {
+    return children.map(extractTextFromChildren).join("");
+  }
+  if (children && typeof children === "object" && "props" in children) {
+    return extractTextFromChildren((children as React.ReactElement).props.children);
+  }
+  return "";
+}
+
+// Slugify function matching backend's markdown.py slugify
+function slugify(text: string): string {
+  // Remove special characters, keep alphanumeric, spaces, and Japanese characters
+  let slug = text.replace(/[^\w\s\u3040-\u309f\u30a0-\u30ff\u4e00-\u9fff-]/g, "");
+  // Replace spaces with hyphens
+  slug = slug.replace(/\s+/g, "-");
+  // Lowercase
+  slug = slug.toLowerCase();
+  return slug || "section";
+}
+
 // Custom heading component to add anchor IDs for TOC navigation
 function HeadingComponent({
   level,
@@ -190,11 +214,12 @@ function HeadingComponent({
   ...props
 }: {
   level: number;
-  children: React.ReactNode;
+  children?: React.ReactNode;
 }) {
-  // Generate ID from heading text (matching backend format)
-  const text = String(children);
-  const id = text.replace(/:\s*/g, "-").replace(/\s+/g, "-");
+  // Extract text from React children (handles nested elements like <strong>)
+  const text = extractTextFromChildren(children);
+  // Generate ID matching backend slugify format
+  const id = slugify(text);
 
   const Tag = `h${level}` as keyof JSX.IntrinsicElements;
   return (

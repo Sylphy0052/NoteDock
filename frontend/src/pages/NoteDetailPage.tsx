@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import {
@@ -16,9 +16,11 @@ import {
   List,
   ChevronRight,
   Download,
+  Eye,
   X,
 } from "lucide-react";
 import { MarkdownViewer } from "../components/markdown";
+import { FileViewerModal } from "../components/files";
 import {
   getNote,
   deleteNote,
@@ -33,8 +35,46 @@ import { getFileDownloadUrl } from "../api/files";
 import { useToast } from "../components/common";
 import type { TocItem, Comment as CommentType } from "../api/types";
 
-// Table of Contents Sidebar
-function TocSidebar({ items }: { items: TocItem[] }) {
+type FileInfo = { id: number; original_name: string; mime_type: string; size_bytes: number };
+
+// Table of Contents Sidebar with active section tracking
+function TocSidebar({ items, commentsCount }: { items: TocItem[]; commentsCount: number }) {
+  const [activeId, setActiveId] = useState<string | null>(null);
+
+  // Track which section is currently visible
+  useEffect(() => {
+    if (items.length === 0) return;
+
+    const allIds = [...items.map((item) => item.id), "comment-section"];
+    const observer = new IntersectionObserver(
+      (entries) => {
+        // Find the first visible section
+        const visibleEntries = entries.filter((entry) => entry.isIntersecting);
+        if (visibleEntries.length > 0) {
+          // Get the topmost visible section
+          const topEntry = visibleEntries.reduce((prev, curr) =>
+            prev.boundingClientRect.top < curr.boundingClientRect.top ? prev : curr
+          );
+          setActiveId(topEntry.target.id);
+        }
+      },
+      {
+        rootMargin: "-80px 0px -60% 0px",
+        threshold: 0,
+      }
+    );
+
+    // Observe all headings and comment section
+    allIds.forEach((id) => {
+      const element = document.getElementById(id);
+      if (element) {
+        observer.observe(element);
+      }
+    });
+
+    return () => observer.disconnect();
+  }, [items]);
+
   const handleClick = (id: string) => {
     const element = document.getElementById(id);
     if (element) {
@@ -42,7 +82,7 @@ function TocSidebar({ items }: { items: TocItem[] }) {
     }
   };
 
-  if (items.length === 0) return null;
+  if (items.length === 0 && commentsCount === 0) return null;
 
   return (
     <aside className="toc-sidebar">
@@ -54,12 +94,20 @@ function TocSidebar({ items }: { items: TocItem[] }) {
         {items.map((item) => (
           <button
             key={item.id}
-            className="toc-item"
+            className={`toc-item ${activeId === item.id ? "active" : ""}`}
             onClick={() => handleClick(item.id)}
           >
             {item.text}
           </button>
         ))}
+        {/* Comments section link */}
+        <button
+          className={`toc-item toc-item-comments ${activeId === "comment-section" ? "active" : ""}`}
+          onClick={() => handleClick("comment-section")}
+        >
+          <MessageSquare size={14} />
+          コメント ({commentsCount})
+        </button>
       </nav>
     </aside>
   );
@@ -69,8 +117,11 @@ function TocSidebar({ items }: { items: TocItem[] }) {
 function FileList({
   files,
 }: {
-  files: { id: number; original_name: string; mime_type: string; size_bytes: number }[];
+  files: FileInfo[];
 }) {
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<FileInfo | null>(null);
+
   const formatSize = (bytes: number) => {
     if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -87,6 +138,20 @@ function FileList({
     document.body.removeChild(a);
   };
 
+  const handlePreview = (file: FileInfo) => {
+    setSelectedFile(file);
+    setViewerOpen(true);
+  };
+
+  const isPreviewable = (mimeType: string) => {
+    return (
+      mimeType.startsWith("image/") ||
+      mimeType === "application/pdf" ||
+      mimeType.startsWith("text/") ||
+      mimeType === "application/json"
+    );
+  };
+
   if (files.length === 0) return null;
 
   return (
@@ -100,15 +165,34 @@ function FileList({
           <li key={file.id} className="file-item">
             <span className="file-name">{file.original_name}</span>
             <span className="file-size">{formatSize(file.size_bytes)}</span>
-            <button
-              className="btn btn-icon btn-sm"
-              onClick={() => handleDownload(file.id, file.original_name)}
-            >
-              <Download size={14} />
-            </button>
+            <div className="file-actions">
+              {isPreviewable(file.mime_type) && (
+                <button
+                  className="btn btn-icon btn-sm"
+                  onClick={() => handlePreview(file)}
+                  title="プレビュー"
+                >
+                  <Eye size={14} />
+                </button>
+              )}
+              <button
+                className="btn btn-icon btn-sm"
+                onClick={() => handleDownload(file.id, file.original_name)}
+                title="ダウンロード"
+              >
+                <Download size={14} />
+              </button>
+            </div>
           </li>
         ))}
       </ul>
+
+      <FileViewerModal
+        isOpen={viewerOpen}
+        onClose={() => setViewerOpen(false)}
+        file={selectedFile}
+        files={files}
+      />
     </div>
   );
 }
@@ -163,7 +247,7 @@ function CommentSection({
   };
 
   return (
-    <div className="comment-section">
+    <div id="comment-section" className="comment-section">
       <h3>
         <MessageSquare size={16} />
         コメント ({comments.length})
@@ -444,7 +528,7 @@ export default function NoteDetailPage() {
 
       {/* Main Content */}
       <div className="note-layout">
-        <TocSidebar items={tocItems || []} />
+        <TocSidebar items={tocItems || []} commentsCount={comments?.length || 0} />
 
         <main className="note-main">
           <article className="note-article">

@@ -28,6 +28,7 @@ import {
   AlertTriangle,
   FileText,
   MoreVertical,
+  FolderPlus,
 } from "lucide-react";
 import { MarkdownViewer } from "../components/markdown";
 import { ImageInsertModal, NoteLinkSuggester } from "../components/editor";
@@ -42,10 +43,30 @@ import {
   refreshEditLock,
 } from "../api/notes";
 import { uploadFile, getFileDownloadUrl } from "../api/files";
-import { getFolders } from "../api/folders";
-import { getSuggestedTags } from "../api/tags";
+import { getFolders, createFolder } from "../api/folders";
+import { getTags } from "../api/tags";
+import {
+  checkDraft,
+  checkDraftByNoteId,
+  saveDraft as saveDraftApi,
+  deleteDraft as deleteDraftApi,
+  deleteDraftByNoteId,
+  type Draft,
+} from "../api/drafts";
 import { useToast } from "../components/common";
+import { getFileUrl as toAbsoluteUrl } from "../utils/api";
 import type { NoteCreate, NoteUpdate } from "../api/types";
+
+// Generate a unique session ID for draft management
+function getOrCreateSessionId(): string {
+  const key = "notedock_session_id";
+  let sessionId = sessionStorage.getItem(key);
+  if (!sessionId) {
+    sessionId = `session_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+    sessionStorage.setItem(key, sessionId);
+  }
+  return sessionId;
+}
 
 // Editor Toolbar
 interface ToolbarProps {
@@ -89,23 +110,54 @@ function EditorToolbar({ onInsert, onUploadImage }: ToolbarProps) {
 interface TagInputProps {
   tags: string[];
   onChange: (tags: string[]) => void;
-  noteId?: number;
 }
 
-function TagInput({ tags, onChange, noteId }: TagInputProps) {
+function TagInput({ tags, onChange }: TagInputProps) {
   const [input, setInput] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState(-1);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  const { data: suggestions } = useQuery({
-    queryKey: ["tag-suggestions", noteId],
-    queryFn: () => (noteId ? getSuggestedTags(noteId) : Promise.resolve([])),
-    enabled: !!noteId,
+  // Fetch all tags for suggestions
+  const { data: allTags = [] } = useQuery({
+    queryKey: ["tags"],
+    queryFn: getTags,
   });
 
+  // Filter suggestions based on input
+  const filteredSuggestions = allTags
+    .map((t) => t.name)
+    .filter(
+      (name) =>
+        !tags.includes(name) &&
+        (input === "" || name.toLowerCase().includes(input.toLowerCase()))
+    )
+    .slice(0, 10);
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" || e.key === ",") {
+    if (e.key === "ArrowDown") {
       e.preventDefault();
-      addTag(input.trim());
+      setSelectedIndex((prev) =>
+        prev < filteredSuggestions.length - 1 ? prev + 1 : prev
+      );
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setSelectedIndex((prev) => (prev > 0 ? prev - 1 : -1));
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      if (selectedIndex >= 0 && filteredSuggestions[selectedIndex]) {
+        addTag(filteredSuggestions[selectedIndex]);
+      } else if (input.trim()) {
+        addTag(input.trim());
+      }
+    } else if (e.key === ",") {
+      e.preventDefault();
+      if (input.trim()) {
+        addTag(input.trim());
+      }
+    } else if (e.key === "Escape") {
+      setShowSuggestions(false);
+      setSelectedIndex(-1);
     }
   };
 
@@ -114,11 +166,17 @@ function TagInput({ tags, onChange, noteId }: TagInputProps) {
       onChange([...tags, tag]);
     }
     setInput("");
-    setShowSuggestions(false);
+    setSelectedIndex(-1);
   };
 
   const removeTag = (tag: string) => {
     onChange(tags.filter((t) => t !== tag));
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setInput(e.target.value);
+    setSelectedIndex(-1);
+    setShowSuggestions(true);
   };
 
   return (
@@ -133,25 +191,32 @@ function TagInput({ tags, onChange, noteId }: TagInputProps) {
           </span>
         ))}
         <input
+          ref={inputRef}
           type="text"
           value={input}
-          onChange={(e) => setInput(e.target.value)}
+          onChange={handleInputChange}
           onKeyDown={handleKeyDown}
           onFocus={() => setShowSuggestions(true)}
-          onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+          onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
           placeholder="タグを追加..."
           className="tag-input"
         />
       </div>
-      {showSuggestions && suggestions && suggestions.length > 0 && (
+      {showSuggestions && filteredSuggestions.length > 0 && (
         <ul className="tag-suggestions">
-          {suggestions
-            .filter((s) => !tags.includes(s))
-            .map((suggestion) => (
-              <li key={suggestion} onClick={() => addTag(suggestion)}>
-                {suggestion}
-              </li>
-            ))}
+          {filteredSuggestions.map((suggestion, index) => (
+            <li
+              key={suggestion}
+              className={index === selectedIndex ? "selected" : ""}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                addTag(suggestion);
+              }}
+              onMouseEnter={() => setSelectedIndex(index)}
+            >
+              {suggestion}
+            </li>
+          ))}
         </ul>
       )}
     </div>
@@ -195,6 +260,8 @@ export default function NoteEditPage() {
   const [showTemplateModal, setShowTemplateModal] = useState(isNew);
   const [showSaveTemplateModal, setShowSaveTemplateModal] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [showCreateFolderModal, setShowCreateFolderModal] = useState(false);
+  const [newFolderName, setNewFolderName] = useState("");
 
   // Edit lock state
   const [lockStatus, setLockStatus] = useState<{
@@ -210,46 +277,58 @@ export default function NoteEditPage() {
   // Draft auto-save state
   const [lastDraftSaved, setLastDraftSaved] = useState<Date | null>(null);
   const [showDraftRecovery, setShowDraftRecovery] = useState(false);
-  const [recoveredDraft, setRecoveredDraft] = useState<{
-    title: string;
-    content: string;
-  } | null>(null);
+  const [recoveredDraft, setRecoveredDraft] = useState<Draft | null>(null);
   const draftAutoSaveIntervalRef = useRef<number | null>(null);
   const DRAFT_AUTO_SAVE_INTERVAL = 30 * 1000; // 30 seconds
+  const sessionId = useRef<string>(getOrCreateSessionId());
 
-  // Draft helper functions
-  const getDraftKey = useCallback(() => {
-    return isNew ? "draft_new_note" : `draft_note_${id}`;
-  }, [isNew, id]);
-
-  const saveDraft = useCallback(() => {
+  // Draft helper functions (API-based)
+  const saveDraft = useCallback(async () => {
     if (!title && !content) return;
-    const draft = {
-      title,
-      content,
-      savedAt: new Date().toISOString(),
-    };
-    localStorage.setItem(getDraftKey(), JSON.stringify(draft));
-    setLastDraftSaved(new Date());
-  }, [title, content, getDraftKey]);
-
-  const loadDraft = useCallback(() => {
-    const draftStr = localStorage.getItem(getDraftKey());
-    if (draftStr) {
-      try {
-        const draft = JSON.parse(draftStr);
-        return draft;
-      } catch {
-        return null;
-      }
+    try {
+      await saveDraftApi({
+        session_id: sessionId.current,
+        note_id: id || null,
+        title,
+        content_md: content,
+        folder_id: folderId,
+        tags,
+      });
+      setLastDraftSaved(new Date());
+    } catch (err) {
+      console.error("Failed to save draft:", err);
     }
-    return null;
-  }, [getDraftKey]);
+  }, [title, content, folderId, tags, id]);
 
-  const clearDraft = useCallback(() => {
-    localStorage.removeItem(getDraftKey());
-    setLastDraftSaved(null);
-  }, [getDraftKey]);
+  const loadDraft = useCallback(async (): Promise<Draft | null> => {
+    try {
+      if (id) {
+        // For existing notes, check by note_id
+        const response = await checkDraftByNoteId(id);
+        return response.draft;
+      } else {
+        // For new notes, check by session_id
+        const response = await checkDraft(sessionId.current);
+        return response.draft;
+      }
+    } catch (err) {
+      console.error("Failed to load draft:", err);
+      return null;
+    }
+  }, [id]);
+
+  const clearDraft = useCallback(async () => {
+    try {
+      if (id) {
+        await deleteDraftByNoteId(id);
+      } else {
+        await deleteDraftApi(sessionId.current);
+      }
+      setLastDraftSaved(null);
+    } catch (err) {
+      console.error("Failed to clear draft:", err);
+    }
+  }, [id]);
 
   // Fetch existing note
   const { data: note, isLoading } = useQuery({
@@ -274,26 +353,29 @@ export default function NoteEditPage() {
       setIsPinned(note.is_pinned);
       setIsReadonly(note.is_readonly);
       setCoverFileId(note.cover_file_id);
-      setCoverFileUrl(note.cover_file_url);
+      setCoverFileUrl(toAbsoluteUrl(note.cover_file_url));
       setAttachedFiles(note.files || []);
     }
   }, [note]);
 
   // Check for draft recovery on mount
   useEffect(() => {
-    const draft = loadDraft();
-    if (draft) {
-      // For new notes, always check draft
-      // For existing notes, check if draft is newer or has different content
-      const shouldRecover = isNew
-        ? draft.title || draft.content
-        : note && (draft.title !== note.title || draft.content !== note.content_md);
+    const checkForDraft = async () => {
+      const draft = await loadDraft();
+      if (draft) {
+        // For new notes, always check draft
+        // For existing notes, check if draft is newer or has different content
+        const shouldRecover = isNew
+          ? draft.title || draft.content_md
+          : note && (draft.title !== note.title || draft.content_md !== note.content_md);
 
-      if (shouldRecover) {
-        setRecoveredDraft({ title: draft.title, content: draft.content });
-        setShowDraftRecovery(true);
+        if (shouldRecover) {
+          setRecoveredDraft(draft);
+          setShowDraftRecovery(true);
+        }
       }
-    }
+    };
+    checkForDraft();
   }, [loadDraft, isNew, note]);
 
   // Draft auto-save interval
@@ -316,15 +398,21 @@ export default function NoteEditPage() {
   const handleRecoverDraft = () => {
     if (recoveredDraft) {
       setTitle(recoveredDraft.title);
-      setContent(recoveredDraft.content);
+      setContent(recoveredDraft.content_md);
+      if (recoveredDraft.folder_id) {
+        setFolderId(recoveredDraft.folder_id);
+      }
+      if (recoveredDraft.tags.length > 0) {
+        setTags(recoveredDraft.tags);
+      }
       showToast("ドラフトを復元しました", "success");
     }
     setShowDraftRecovery(false);
     setRecoveredDraft(null);
   };
 
-  const handleDiscardDraft = () => {
-    clearDraft();
+  const handleDiscardDraft = async () => {
+    await clearDraft();
     setShowDraftRecovery(false);
     setRecoveredDraft(null);
   };
@@ -477,6 +565,21 @@ export default function NoteEditPage() {
     },
     onError: () => {
       showToast("ファイルのアップロードに失敗しました", "error");
+    },
+  });
+
+  // Create folder mutation
+  const createFolderMutation = useMutation({
+    mutationFn: (name: string) => createFolder(name),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["folders"] });
+      setFolderId(data.id);
+      setShowCreateFolderModal(false);
+      setNewFolderName("");
+      showToast("フォルダを作成しました", "success");
+    },
+    onError: () => {
+      showToast("フォルダの作成に失敗しました", "error");
     },
   });
 
@@ -764,8 +867,8 @@ export default function NoteEditPage() {
                   <strong>タイトル:</strong> {recoveredDraft.title || "(無題)"}
                   <br />
                   <strong>内容:</strong>{" "}
-                  {recoveredDraft.content.substring(0, 100)}
-                  {recoveredDraft.content.length > 100 ? "..." : ""}
+                  {recoveredDraft.content_md.substring(0, 100)}
+                  {recoveredDraft.content_md.length > 100 ? "..." : ""}
                 </div>
               )}
             </div>
@@ -846,24 +949,44 @@ export default function NoteEditPage() {
         <div className="edit-sidebar">
           <div className="form-group">
             <label>フォルダ</label>
-            <select
-              value={folderId || ""}
-              onChange={(e) =>
-                setFolderId(e.target.value ? parseInt(e.target.value, 10) : null)
-              }
-            >
-              <option value="">なし</option>
-              {folders?.map((folder) => (
-                <option key={folder.id} value={folder.id}>
-                  {folder.name}
-                </option>
-              ))}
-            </select>
+            <div className="folder-select-container">
+              <select
+                value={folderId || ""}
+                onChange={(e) => {
+                  if (e.target.value === "__create__") {
+                    setShowCreateFolderModal(true);
+                  } else {
+                    setFolderId(e.target.value ? parseInt(e.target.value, 10) : null);
+                  }
+                }}
+              >
+                <option value="">なし</option>
+                {(() => {
+                  // Flatten folder tree for select options
+                  const options: { id: number; name: string; depth: number }[] = [];
+                  const flatten = (items: typeof folders, depth = 0) => {
+                    items?.forEach((folder) => {
+                      options.push({ id: folder.id, name: folder.name, depth });
+                      if (folder.children) {
+                        flatten(folder.children, depth + 1);
+                      }
+                    });
+                  };
+                  flatten(folders);
+                  return options.map((folder) => (
+                    <option key={folder.id} value={folder.id}>
+                      {"　".repeat(folder.depth)}{folder.name}
+                    </option>
+                  ));
+                })()}
+                <option value="__create__">+ 新規フォルダを作成</option>
+              </select>
+            </div>
           </div>
 
           <div className="form-group">
             <label>タグ</label>
-            <TagInput tags={tags} onChange={setTags} noteId={id} />
+            <TagInput tags={tags} onChange={setTags} />
           </div>
 
           <div className="form-group">
@@ -1040,6 +1163,57 @@ export default function NoteEditPage() {
         defaultName={title}
         onSave={() => showToast("テンプレートを保存しました", "success")}
       />
+
+      {/* Create Folder Modal */}
+      {showCreateFolderModal && (
+        <div className="modal-overlay" onClick={() => setShowCreateFolderModal(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <header className="modal-header">
+              <h3>
+                <FolderPlus size={20} />
+                新規フォルダを作成
+              </h3>
+            </header>
+            <div className="modal-body">
+              <div className="form-group">
+                <label htmlFor="new-folder-name">フォルダ名</label>
+                <input
+                  id="new-folder-name"
+                  type="text"
+                  className="input"
+                  value={newFolderName}
+                  onChange={(e) => setNewFolderName(e.target.value)}
+                  placeholder="フォルダ名を入力"
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && newFolderName.trim()) {
+                      createFolderMutation.mutate(newFolderName.trim());
+                    }
+                  }}
+                />
+              </div>
+            </div>
+            <footer className="modal-footer">
+              <button
+                className="btn btn-secondary"
+                onClick={() => {
+                  setShowCreateFolderModal(false);
+                  setNewFolderName("");
+                }}
+              >
+                キャンセル
+              </button>
+              <button
+                className="btn btn-primary"
+                onClick={() => createFolderMutation.mutate(newFolderName.trim())}
+                disabled={!newFolderName.trim() || createFolderMutation.isPending}
+              >
+                {createFolderMutation.isPending ? "作成中..." : "作成"}
+              </button>
+            </footer>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

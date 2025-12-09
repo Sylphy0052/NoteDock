@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { Pin, Lock, Tag } from "lucide-react";
 import type { NoteSummary } from "../../api/types";
+import { getFileUrl } from "../../utils/api";
 import clsx from "clsx";
 
 interface NoteCardProps {
@@ -24,7 +25,7 @@ export default function NoteCard({ note, className }: NoteCardProps) {
     <Link to={`/notes/${note.id}`} className={clsx("note-card", className)}>
       {note.cover_file_url && (
         <div className="note-card-cover">
-          <img src={note.cover_file_url} alt="" />
+          <img src={getFileUrl(note.cover_file_url) || ""} alt="" />
         </div>
       )}
 
