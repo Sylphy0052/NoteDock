@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { X, FileText, Save } from "lucide-react";
-import { saveUserTemplate } from "../../utils/templates";
+import { X, FileText, Save, Loader2 } from "lucide-react";
+import { createTemplate } from "../../api/templates";
 
 interface SaveAsTemplateModalProps {
   isOpen: boolean;
@@ -22,7 +22,7 @@ export function SaveAsTemplateModal({
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!name.trim()) {
       setError("テンプレート名を入力してください");
       return;
@@ -32,10 +32,15 @@ export function SaveAsTemplateModal({
     setError(null);
 
     try {
-      saveUserTemplate(name.trim(), description.trim(), content);
+      await createTemplate({
+        name: name.trim(),
+        description: description.trim(),
+        content: content,
+      });
       onSave?.();
       handleClose();
     } catch (err) {
+      console.error("Failed to save template:", err);
       setError("テンプレートの保存に失敗しました");
     } finally {
       setIsSaving(false);
@@ -114,7 +119,11 @@ export function SaveAsTemplateModal({
             onClick={handleSave}
             disabled={isSaving || !name.trim()}
           >
-            <Save size={16} />
+            {isSaving ? (
+              <Loader2 size={16} className="animate-spin" />
+            ) : (
+              <Save size={16} />
+            )}
             保存
           </button>
         </footer>

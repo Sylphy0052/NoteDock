@@ -8,4 +8,6 @@ export * from "./linkmap";
 export * from "./folders";
 export * from "./tags";
 export * from "./importExport";
+export * from "./templates";
+export * from "./drafts";
 export { default as apiClient, getErrorMessage } from "./client";
