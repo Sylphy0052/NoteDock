@@ -1,7 +1,14 @@
 import { useState, useEffect } from "react";
 import { X, Download, ZoomIn, ZoomOut, RotateCw, ChevronLeft, ChevronRight } from "lucide-react";
 import { Modal } from "../common";
-import { getFileDownloadUrl } from "../../api/files";
+import { getFileDownloadUrl, getFilePreviewUrl } from "../../api/files";
+import { PptxViewer } from "./PptxViewer";
+
+// PPTX MIME types
+const PPTX_MIME_TYPES = [
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation", // .pptx
+  "application/vnd.ms-powerpoint", // .ppt (legacy)
+];
 
 interface FileViewerModalProps {
   isOpen: boolean;
@@ -32,12 +39,32 @@ export function FileViewerModal({
 
   const currentFile = files.length > 0 ? files[currentIndex] : file;
 
+  // Check if file can be previewed inline
+  const isPreviewable = (mimeType: string) => {
+    return (
+      mimeType.startsWith("image/") ||
+      mimeType === "application/pdf" ||
+      mimeType.startsWith("text/") ||
+      mimeType === "application/json"
+    );
+  };
+
+  // Check if file is PPTX
+  const isPptx = (mimeType: string) => PPTX_MIME_TYPES.includes(mimeType);
+
   useEffect(() => {
     if (isOpen && currentFile) {
       setLoading(true);
-      getFileDownloadUrl(currentFile.id)
-        .then((url) => {
-          setFileUrl(url);
+      // Use preview URL for previewable files, download URL for PPTX and others
+      // PPTX needs download URL because we parse the binary file
+      const url = isPptx(currentFile.mime_type)
+        ? getFileDownloadUrl(currentFile.id)
+        : isPreviewable(currentFile.mime_type)
+          ? getFilePreviewUrl(currentFile.id)
+          : getFileDownloadUrl(currentFile.id);
+      Promise.resolve(url)
+        .then((resolvedUrl) => {
+          setFileUrl(resolvedUrl);
           setLoading(false);
         })
         .catch(() => {
@@ -152,6 +179,13 @@ export function FileViewerModal({
           title={currentFile.original_name}
           className="viewer-pdf"
         />
+      );
+    }
+
+    // PPTX viewer
+    if (isPptx(mimeType)) {
+      return (
+        <PptxViewer fileUrl={fileUrl} />
       );
     }
 
