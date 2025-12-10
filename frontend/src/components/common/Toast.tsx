@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from "react";
 import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from "lucide-react";
 import clsx from "clsx";
 
@@ -26,14 +26,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     (message: string, type: ToastType = "info", duration = 5000) => {
       const id = Math.random().toString(36).slice(2);
       const toast: Toast = { id, type, message, duration };
-
       setToasts((prev) => [...prev, toast]);
-
-      if (duration > 0) {
-        setTimeout(() => {
-          setToasts((prev) => prev.filter((t) => t.id !== id));
-        }, duration);
-      }
     },
     []
   );
@@ -62,8 +55,14 @@ export function useToast() {
   };
 }
 
-function ToastContainer() {
-  const { toasts, removeToast } = useToast();
+interface ToastItemProps {
+  toast: Toast;
+  onRemove: (id: string) => void;
+}
+
+function ToastItem({ toast, onRemove }: ToastItemProps) {
+  const [isVisible, setIsVisible] = useState(false);
+  const [isExiting, setIsExiting] = useState(false);
 
   const getIcon = (type: ToastType) => {
     switch (type) {
@@ -78,20 +77,57 @@ function ToastContainer() {
     }
   };
 
+  useEffect(() => {
+    // Trigger enter animation
+    requestAnimationFrame(() => {
+      setIsVisible(true);
+    });
+
+    // Auto dismiss
+    const duration = toast.duration || 5000;
+    if (duration > 0) {
+      const timer = setTimeout(() => {
+        handleClose();
+      }, duration);
+      return () => clearTimeout(timer);
+    }
+  }, [toast.duration]);
+
+  const handleClose = () => {
+    setIsExiting(true);
+    setTimeout(() => onRemove(toast.id), 300);
+  };
+
+  return (
+    <div
+      className={clsx(
+        "toast",
+        `toast-${toast.type}`,
+        isVisible && "visible",
+        isExiting && "exiting"
+      )}
+      role="alert"
+    >
+      <span className="toast-icon">{getIcon(toast.type)}</span>
+      <span className="toast-message">{toast.message}</span>
+      <button
+        className="toast-close"
+        onClick={handleClose}
+        aria-label="閉じる"
+      >
+        <X size={16} />
+      </button>
+    </div>
+  );
+}
+
+function ToastContainer() {
+  const { toasts, removeToast } = useToast();
+
   return (
     <div className="toast-container">
       {toasts.map((toast) => (
-        <div key={toast.id} className={clsx("toast", `toast-${toast.type}`)}>
-          <span className="toast-icon">{getIcon(toast.type)}</span>
-          <span className="toast-message">{toast.message}</span>
-          <button
-            className="toast-close"
-            onClick={() => removeToast(toast.id)}
-            aria-label="閉じる"
-          >
-            <X size={16} />
-          </button>
-        </div>
+        <ToastItem key={toast.id} toast={toast} onRemove={removeToast} />
       ))}
     </div>
   );

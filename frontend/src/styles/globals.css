@@ -562,6 +562,65 @@ a:focus-visible {
 
 .sidebar.collapsed {
   width: 64px;
+  padding: 1rem 0.5rem;
+}
+
+/* Sidebar toggle button */
+.sidebar-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: 0.375rem;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  margin-bottom: 1rem;
+  margin-left: auto;
+  transition:
+    background var(--transition-fast),
+    color var(--transition-fast),
+    transform var(--transition-fast);
+}
+
+.sidebar-toggle:hover {
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+.sidebar-toggle svg {
+  transition: transform var(--animation-duration-normal) var(--animation-ease-out);
+}
+
+.sidebar.collapsed .sidebar-toggle svg {
+  transform: rotate(180deg);
+}
+
+/* Label transition for collapsed state */
+.nav-item span,
+.new-note-button span {
+  white-space: nowrap;
+  overflow: hidden;
+  transition:
+    opacity var(--animation-duration-fast) var(--animation-ease-out),
+    width var(--animation-duration-normal) var(--animation-ease-out);
+}
+
+.sidebar.collapsed .nav-item span,
+.sidebar.collapsed .new-note-button span {
+  opacity: 0;
+  width: 0;
+}
+
+.sidebar.collapsed .nav-item {
+  justify-content: center;
+  padding: 0.625rem;
+}
+
+.sidebar.collapsed .new-note-button {
+  padding: 0.75rem;
 }
 
 .sidebar-nav {
@@ -987,23 +1046,27 @@ a:focus-visible {
   box-shadow: var(--shadow-lg);
   min-width: 300px;
   max-width: 450px;
-  animation: toastSlideIn var(--transition-normal) ease-out;
+  opacity: 0;
+  transform: translateX(100%);
+  transition:
+    opacity var(--animation-duration-normal) var(--animation-ease-out),
+    transform var(--animation-duration-normal) var(--animation-ease-out);
+}
+
+.toast.visible {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.toast.exiting {
+  opacity: 0;
+  transform: translateX(100%);
 }
 
 [data-theme='dark'] .toast {
   background: var(--color-bg-secondary);
 }
 
-@keyframes toastSlideIn {
-  from {
-    opacity: 0;
-    transform: translateX(100%);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
 
 .toast-success {
   border-left: 4px solid var(--color-success);
@@ -2864,11 +2927,20 @@ a:focus-visible {
 
 .linkmap-node {
   cursor: pointer;
+  transition: transform var(--animation-duration-fast) var(--animation-ease-out);
+}
+
+.linkmap-node:hover {
+  transform: scale(1.1);
 }
 
 .node-circle {
   fill: var(--color-primary);
-  transition: r 0.2s;
+  transition:
+    fill var(--animation-duration-fast) var(--animation-ease-out),
+    r var(--animation-duration-fast) var(--animation-ease-out),
+    stroke var(--animation-duration-fast) var(--animation-ease-out),
+    stroke-width var(--animation-duration-fast) var(--animation-ease-out);
 }
 
 .linkmap-node:hover .node-circle {
@@ -2882,6 +2954,11 @@ a:focus-visible {
 .node-label {
   fill: var(--color-text);
   font-size: 12px;
+  transition: fill var(--animation-duration-fast) var(--animation-ease-out);
+}
+
+.linkmap-node:hover .node-label {
+  fill: var(--color-primary);
 }
 
 .linkmap-tooltip {
@@ -4421,6 +4498,18 @@ a:focus-visible {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   z-index: 100;
   pointer-events: none;
+  animation: hoverCardFadeIn var(--animation-duration-fast) var(--animation-ease-out);
+}
+
+@keyframes hoverCardFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
 }
 
 .linkmap-hover-card h4 {
