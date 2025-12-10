@@ -104,21 +104,21 @@ export default function Header({ onSearch }: HeaderProps) {
             onClick={() => setIsShortcutsOpen(true)}
             title="キーボードショートカット (?)"
           >
-            <Keyboard size={20} />
+            <Keyboard size={20} strokeWidth={2.5} />
           </button>
           <button
             className="icon-button"
             onClick={toggleTheme}
             title={theme === "light" ? "ダークモードに切替" : "ライトモードに切替"}
           >
-            {theme === "light" ? <Moon size={20} /> : <Sun size={20} />}
+            {theme === "light" ? <Moon size={20} strokeWidth={2.5} fill="currentColor" /> : <Sun size={20} strokeWidth={2.5} fill="currentColor" />}
           </button>
           <button
             className="icon-button"
             onClick={() => setIsSettingsOpen(!isSettingsOpen)}
             title="設定"
           >
-            <Settings size={20} />
+            <Settings size={20} strokeWidth={2.5} />
           </button>
         </div>
 
