@@ -3,6 +3,8 @@ import { Pin, Clock, RefreshCw, Plus } from "lucide-react";
 import { Link } from "react-router-dom";
 import { getNotes } from "../api/notes";
 import { NoteCard } from "../components/notes";
+import { NoteListSkeleton } from "../components/common/Skeleton";
+import { useStaggeredAnimation } from "../hooks/useStaggeredAnimation";
 import type { NoteSummary } from "../api/types";
 
 interface NoteSectionProps {
@@ -20,6 +22,8 @@ function NoteSection({
   isLoading,
   emptyMessage,
 }: NoteSectionProps) {
+  const { className: animationClass } = useStaggeredAnimation(notes.length);
+
   return (
     <section className="home-section">
       <div className="section-header">
@@ -33,14 +37,11 @@ function NoteSection({
       </div>
       <div className="section-content">
         {isLoading ? (
-          <div className="loading-placeholder">
-            <div className="spinner" />
-            <span>読み込み中...</span>
-          </div>
+          <NoteListSkeleton count={3} />
         ) : notes.length > 0 ? (
           <div className="note-grid">
             {notes.map((note) => (
-              <NoteCard key={note.id} note={note} />
+              <NoteCard key={note.id} note={note} className={animationClass} />
             ))}
           </div>
         ) : (

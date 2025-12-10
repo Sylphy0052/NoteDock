@@ -7,6 +7,8 @@ import { getTags } from "../api/tags";
 import { getFolders } from "../api/folders";
 import { NoteCard } from "../components/notes";
 import { Pagination, TextInput } from "../components/common";
+import { NoteListSkeleton } from "../components/common/Skeleton";
+import { useStaggeredAnimation } from "../hooks/useStaggeredAnimation";
 
 export default function NotesListPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -49,6 +51,11 @@ export default function NotesListPage() {
   const notes = data?.items || [];
   const total = data?.total || 0;
   const totalPages = Math.ceil(total / pageSize);
+
+  // Staggered animation for note cards
+  const { className: animationClass } = useStaggeredAnimation(notes.length, {
+    reanimateOnChange: true,
+  });
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -205,10 +212,7 @@ export default function NotesListPage() {
 
       <div className="notes-content">
         {isLoading ? (
-          <div className="loading-placeholder">
-            <div className="spinner" />
-            <span>読み込み中...</span>
-          </div>
+          <NoteListSkeleton count={6} />
         ) : notes.length > 0 ? (
           <>
             <div className="notes-info">
@@ -216,7 +220,7 @@ export default function NotesListPage() {
             </div>
             <div className="note-grid">
               {notes.map((note) => (
-                <NoteCard key={note.id} note={note} />
+                <NoteCard key={note.id} note={note} className={animationClass} />
               ))}
             </div>
             {totalPages > 1 && (
