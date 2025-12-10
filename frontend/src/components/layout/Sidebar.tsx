@@ -7,13 +7,15 @@ import {
   Network,
   FolderTree,
   Plus,
+  ChevronsLeft,
 } from "lucide-react";
 
 interface SidebarProps {
   isCollapsed?: boolean;
+  onToggle?: () => void;
 }
 
-export default function Sidebar({ isCollapsed = false }: SidebarProps) {
+export default function Sidebar({ isCollapsed = false, onToggle }: SidebarProps) {
   const navItems = [
     { to: "/", icon: Home, label: "ホーム" },
     { to: "/notes", icon: FileText, label: "ノート" },
@@ -25,10 +27,18 @@ export default function Sidebar({ isCollapsed = false }: SidebarProps) {
 
   return (
     <aside className={`sidebar ${isCollapsed ? "collapsed" : ""}`}>
+      <button
+        className="sidebar-toggle"
+        onClick={onToggle}
+        title={isCollapsed ? "サイドバーを展開" : "サイドバーを折りたたむ"}
+        aria-label={isCollapsed ? "サイドバーを展開" : "サイドバーを折りたたむ"}
+      >
+        <ChevronsLeft size={18} />
+      </button>
       <nav className="sidebar-nav">
         <NavLink to="/notes/new" className="new-note-button">
           <Plus size={20} />
-          {!isCollapsed && <span>新規ノート</span>}
+          <span>新規ノート</span>
         </NavLink>
 
         <div className="nav-section">
@@ -42,7 +52,7 @@ export default function Sidebar({ isCollapsed = false }: SidebarProps) {
               title={label}
             >
               <Icon size={20} />
-              {!isCollapsed && <span>{label}</span>}
+              <span>{label}</span>
             </NavLink>
           ))}
         </div>
