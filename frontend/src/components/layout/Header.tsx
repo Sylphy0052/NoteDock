@@ -6,9 +6,12 @@ import {
   Sun,
   Settings,
   Command,
+  Ship,
+  Keyboard,
 } from "lucide-react";
 import { useTheme } from "../../hooks/useTheme";
 import QuickOpenModal from "../common/QuickOpenModal";
+import KeyboardShortcutsModal from "../common/KeyboardShortcutsModal";
 
 interface HeaderProps {
   onSearch?: (query: string) => void;
@@ -22,6 +25,7 @@ export default function Header({ onSearch }: HeaderProps) {
     () => localStorage.getItem("notedock_display_name") || ""
   );
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,12 +37,25 @@ export default function Header({ onSearch }: HeaderProps) {
     setIsSettingsOpen(false);
   };
 
-  // Keyboard shortcut for quick open (Ctrl+K)
+  // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore if user is typing in an input field
+      const target = e.target as HTMLElement;
+      if (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable) {
+        return;
+      }
+
+      // Ctrl+K: Quick open
       if ((e.ctrlKey || e.metaKey) && e.key === "k") {
         e.preventDefault();
         setIsQuickOpenOpen(true);
+      }
+
+      // ?: Keyboard shortcuts help
+      if (e.key === "?" && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        setIsShortcutsOpen(true);
       }
     };
     window.addEventListener("keydown", handleKeyDown);
@@ -50,8 +67,12 @@ export default function Header({ onSearch }: HeaderProps) {
       <header className="header">
         <div className="header-left">
           <Link to="/" className="header-logo">
-            <span className="logo-icon">📝</span>
-            <span className="logo-text">NoteDock</span>
+            <div className="logo-icon-wrapper">
+              <Ship size={20} className="logo-icon" />
+            </div>
+            <span className="logo-text">
+              Note<span className="logo-text-accent">Dock</span>
+            </span>
           </Link>
         </div>
 
@@ -78,6 +99,13 @@ export default function Header({ onSearch }: HeaderProps) {
         </div>
 
         <div className="header-right">
+          <button
+            className="icon-button"
+            onClick={() => setIsShortcutsOpen(true)}
+            title="キーボードショートカット (?)"
+          >
+            <Keyboard size={20} />
+          </button>
           <button
             className="icon-button"
             onClick={toggleTheme}
@@ -117,6 +145,11 @@ export default function Header({ onSearch }: HeaderProps) {
       <QuickOpenModal
         isOpen={isQuickOpenOpen}
         onClose={() => setIsQuickOpenOpen(false)}
+      />
+
+      <KeyboardShortcutsModal
+        isOpen={isShortcutsOpen}
+        onClose={() => setIsShortcutsOpen(false)}
       />
     </>
   );
