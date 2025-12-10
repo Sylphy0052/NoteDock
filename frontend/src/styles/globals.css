@@ -1406,6 +1406,27 @@ a:focus-visible {
   border: 1px solid var(--color-warning);
 }
 
+/* Staggered fade-in animation for note cards */
+.note-card.animate-in {
+  opacity: 0;
+  transform: translateY(20px);
+  animation: noteCardFadeIn var(--animation-duration-normal) var(--animation-ease-out) forwards;
+}
+
+.note-card.animate-in:nth-child(1) { animation-delay: 0ms; }
+.note-card.animate-in:nth-child(2) { animation-delay: 50ms; }
+.note-card.animate-in:nth-child(3) { animation-delay: 100ms; }
+.note-card.animate-in:nth-child(4) { animation-delay: 150ms; }
+.note-card.animate-in:nth-child(5) { animation-delay: 200ms; }
+.note-card.animate-in:nth-child(6) { animation-delay: 250ms; }
+
+@keyframes noteCardFadeIn {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .note-card-cover {
   height: 120px;
   overflow: hidden;
@@ -1677,11 +1698,14 @@ a:focus-visible {
 /* Quick action card icon */
 .quick-action-card svg {
   color: var(--color-text-secondary);
-  transition: color var(--transition-fast);
+  transition:
+    color var(--transition-fast),
+    transform var(--animation-duration-fast) var(--animation-ease-bounce);
 }
 
 .quick-action-card:hover svg {
   color: var(--color-primary);
+  transform: scale(1.15);
 }
 
 .quick-action-card span {
@@ -5240,6 +5264,64 @@ a:focus-visible {
 
 .folders-intro p {
   font-size: 0.875rem;
+}
+
+/* ========================================
+   LOADING SKELETON
+======================================== */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--color-bg-secondary) 25%,
+    var(--color-bg-tertiary) 50%,
+    var(--color-bg-secondary) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite linear;
+  border-radius: 0.25rem;
+}
+
+.skeleton-text {
+  height: 1em;
+  margin-bottom: 0.5rem;
+}
+
+.skeleton-text.short {
+  width: 40%;
+}
+
+.skeleton-text.medium {
+  width: 70%;
+}
+
+.skeleton-text.long {
+  width: 100%;
+}
+
+.skeleton-title {
+  height: 1.5em;
+  width: 60%;
+  margin-bottom: 1rem;
+}
+
+.skeleton-card {
+  height: 200px;
+  border-radius: 0.75rem;
+}
+
+.skeleton-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
 }
 
 /* ========================================
