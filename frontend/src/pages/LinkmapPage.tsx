@@ -209,6 +209,24 @@ export default function LinkmapPage() {
     setPan({ x: 0, y: 0 });
   };
 
+  // Mouse wheel zoom handler (Ctrl + Wheel)
+  // Using native event listener to properly prevent default browser zoom
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        const delta = e.deltaY > 0 ? 0.9 : 1.1;
+        setZoom((z) => Math.min(Math.max(z * delta, 0.3), 3));
+      }
+    };
+
+    container.addEventListener("wheel", handleWheel, { passive: false });
+    return () => container.removeEventListener("wheel", handleWheel);
+  }, []);
+
   // Node click handler
   const handleNodeClick = (nodeId: number) => {
     if (selectedNode === nodeId) {
