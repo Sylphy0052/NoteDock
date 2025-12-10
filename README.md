@@ -147,14 +147,109 @@ pnpm dev
 
 ### テスト実行
 
+#### Backend テスト（pytest）
+
 ```bash
-# Backend テスト
 cd backend
+
+# 基本テスト実行
 pytest -v
 
-# Frontend テスト
+# MinIO統合テストを含む場合
+DB_HOST=localhost DB_PORT=5432 DB_USER=notedock DB_PASSWORD=notedock DB_NAME=notedock \
+  MINIO_ENDPOINT=localhost:9000 MINIO_ACCESS_KEY=notedock MINIO_SECRET_KEY=notedock-secret \
+  MINIO_BUCKET=notedock-files pytest -v
+```
+
+#### Frontend 単体テスト（Vitest）
+
+```bash
 cd frontend
-npm test
+npm test                 # ウォッチモードで実行
+npm run test:coverage    # カバレッジレポート付き
+```
+
+#### E2E テスト（Playwright）
+
+Playwright を使用したエンドツーエンドテストを実行できます。
+
+```bash
+cd frontend
+
+# 1. 初回セットアップ（依存関係とブラウザのインストール）
+npm install
+npx playwright install
+
+# 2. テスト実行
+npm run test:e2e           # 全テスト実行（ヘッドレス）
+npm run test:e2e:ui        # UIモードで実行（インタラクティブ）
+npm run test:e2e:headed    # ブラウザ表示付きで実行
+npm run test:e2e:debug     # デバッグモードで実行
+npm run test:e2e:report    # HTMLレポートを表示
+```
+
+**E2E テストの前提条件：**
+
+- フロントエンド開発サーバーが起動している必要があります（`npm run dev`）
+- または `playwright.config.ts` の `webServer` 設定により自動起動されます
+
+**テストスイート一覧：**
+
+| ファイル | テスト対象 |
+|---------|-----------|
+| `e2e/home.spec.ts` | ホームページ |
+| `e2e/notes-list.spec.ts` | ノート一覧・検索・フィルタリング |
+| `e2e/note-detail.spec.ts` | ノート詳細・コメント・バージョン履歴 |
+| `e2e/note-edit.spec.ts` | ノート編集・作成・テンプレート |
+| `e2e/folders.spec.ts` | フォルダ管理 |
+| `e2e/tags.spec.ts` | タグページ |
+| `e2e/linkmap.spec.ts` | リンクマップ |
+| `e2e/trash.spec.ts` | ゴミ箱 |
+| `e2e/search.spec.ts` | 検索・クイックオープン |
+
+**特定のテストファイルのみ実行：**
+
+```bash
+npx playwright test e2e/home.spec.ts
+npx playwright test e2e/notes-list.spec.ts --headed
+```
+
+**特定のブラウザでのみ実行：**
+
+```bash
+npx playwright test --project=chromium
+npx playwright test --project=firefox
+npx playwright test --project=webkit
+```
+
+### メンテナンススクリプト
+
+#### データリセット
+
+開発・テスト時にデータベースとMinIOストレージの全データを削除できます。
+
+```bash
+cd backend
+
+# 現在のデータ数を確認（削除せず）
+uv run python -m app.scripts.reset_data --dry-run
+
+# データリセット実行（確認プロンプトあり）
+uv run python -m app.scripts.reset_data
+
+# 確認をスキップして実行
+uv run python -m app.scripts.reset_data --force
+```
+
+**注意**: このスクリプトは全データを完全に削除します。本番環境では使用しないでください。
+
+#### クリーンアップ
+
+定期メンテナンス用のクリーンアップスクリプト（ゴミ箱30日経過分の完全削除、古いバージョン履歴の削除など）:
+
+```bash
+cd backend
+uv run python -m app.scripts.run_cleanup
 ```
 
 ## ディレクトリ構成
@@ -169,6 +264,7 @@ notedock/
 │   │   ├── hooks/     # カスタムフック
 │   │   ├── router/    # ルーティング
 │   │   └── styles/    # スタイル
+│   ├── e2e/           # Playwright E2E テスト
 │   └── ...
 ├── backend/           # FastAPI + SQLAlchemy
 │   ├── app/
