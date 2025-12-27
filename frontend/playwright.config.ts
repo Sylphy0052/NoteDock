@@ -1,4 +1,14 @@
 import { defineConfig, devices } from '@playwright/test';
+import * as dotenv from 'dotenv';
+import * as path from 'path';
+import { fileURLToPath } from 'url';
+
+// ESモジュール対応: __dirnameの代替
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Load .env file from project root
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 /**
  * NoteDock E2E テスト設定
@@ -40,24 +50,26 @@ export default defineConfig({
     navigationTimeout: 15000,
   },
   /* プロジェクト（ブラウザ）設定 */
+  /* 注意: Docker環境ではchromiumのみインストールされている */
   projects: [
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
-    },
-    {
-      name: 'firefox',
-      use: { ...devices['Desktop Firefox'] },
-    },
-    {
-      name: 'webkit',
-      use: { ...devices['Desktop Safari'] },
     },
     /* モバイルビューポート */
     {
       name: 'mobile-chrome',
       use: { ...devices['Pixel 5'] },
     },
+    /* Firefox と WebKit はローカル開発時に有効化 */
+    // {
+    //   name: 'firefox',
+    //   use: { ...devices['Desktop Firefox'] },
+    // },
+    // {
+    //   name: 'webkit',
+    //   use: { ...devices['Desktop Safari'] },
+    // },
   ],
   /* 開発サーバー設定 */
   webServer: process.env.E2E_BASE_URL ? undefined : {

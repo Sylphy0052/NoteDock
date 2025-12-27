@@ -45,7 +45,7 @@ services:
       ofelia.job-exec.backup.user: "root"
 
   db:
-    image: postgres:17
+    image: postgres:16
     ports:
       - "5432:5432"
     environment:
@@ -108,7 +108,6 @@ services:
 volumes:
   db-data:
   minio-data:
-  frontend-node-modules:
 
 networks:
   notedock-network:
