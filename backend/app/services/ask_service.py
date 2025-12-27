@@ -1,4 +1,4 @@
-"""HEROZ ASK API integration service."""
+"""ASK API integration service."""
 
 import json
 import uuid
@@ -49,7 +49,7 @@ class FileProcessingError(AskServiceError):
 
 
 class AskService:
-    """HEROZ ASK API integration service.
+    """ASK API integration service.
 
     Note: ASK API has rate limiting of 1 request per second.
     Consider adding retry logic with exponential backoff for production use.

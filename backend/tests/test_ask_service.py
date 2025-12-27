@@ -30,7 +30,7 @@ if _env_file.exists():
                 os.environ.setdefault(key.strip(), value.strip())
 
 # Fallback defaults for unit tests
-os.environ.setdefault("ASK_API_URL", "https://langchaindemo.heroz.jp")
+os.environ.setdefault("ASK_API_URL", "https://api.example.com")
 os.environ.setdefault("ASK_API_KEY", "test-api-key")
 os.environ.setdefault("ASK_PROJECT_ID", "0")
 os.environ.setdefault("ASK_DEFAULT_MODEL", "gpt-4o-mini")

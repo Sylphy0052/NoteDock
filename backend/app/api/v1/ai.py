@@ -1,4 +1,4 @@
-"""AI API endpoints using HEROZ ASK API."""
+"""AI API endpoints."""
 
 import json
 from typing import AsyncGenerator, Optional
