@@ -23,6 +23,7 @@ NoteDock は、ノートに PDF / PPTX / 画像 / テキストファイルなど
 | テーマ切替 | ✅ | ライト/ダークモード |
 | インポート/エクスポート | ✅ | ZIP 形式での一括入出力 |
 | フォルダ管理 | ✅ | フォルダによるノート整理（ツリー構造、最大3階層） |
+| AI機能 | ✅ | ノート要約、質問応答、文章支援 |
 
 ## 技術スタック
 
@@ -37,7 +38,7 @@ NoteDock は、ノートに PDF / PPTX / 画像 / テキストファイルなど
 
 - FastAPI (Python >=3.11)
 - SQLAlchemy 2.0 + Alembic
-- PostgreSQL 16
+- PostgreSQL 17
 - Pydantic v2
 
 ### Infrastructure
@@ -252,6 +253,132 @@ cd backend
 uv run python -m app.scripts.run_cleanup
 ```
 
+#### 週報自動集約
+
+毎週月曜日に実行し、過去1週間の週報ノートをプロジェクトごとにAIで集約して実績ノートを作成します。
+
+```bash
+cd backend
+uv run python -m app.scripts.run_weekly_report
+```
+
+**週報の形式:**
+
+週報ノートは「週報」を含むフォルダ（例：`週報/個人/田中太郎`）に作成し、以下の形式でプロジェクトセクションを記述します：
+
+```markdown
+# 週報 12/25
+
+## @P ACME/販売管理システム
+- 機能Aを実装
+- バグBを修正
+- #123 のレビュー対応
+
+## @P ACME/顧客管理システム
+- ログイン画面を改修
+
+## other
+- 社内勉強会参加
+```
+
+**処理内容:**
+
+1. 「週報」を含むフォルダ配下の過去7日間に作成されたノートを収集
+2. `## @P 会社名/プロジェクト名` パターンでセクションを抽出
+3. `#123` 形式のノートリンクからコンテンツを取得
+4. プロジェクトごとにAIで集約
+5. 各プロジェクトに紐づく「{プロジェクト名} 週報実績」ノートを作成/先頭に追記
+
+**cron設定（毎週月曜0時）:**
+
+```bash
+0 0 * * 1 cd /path/to/notedock/backend && uv run python -m app.scripts.run_weekly_report >> /var/log/notedock_weekly_report.log 2>&1
+```
+
+#### バックアップ
+
+データベースとMinIOストレージのバックアップを作成します。
+
+```bash
+# 全てバックアップ（DB + MinIO）
+./scripts/backup.sh
+
+# データベースのみ
+./scripts/backup.sh --db-only
+
+# MinIOのみ
+./scripts/backup.sh --minio-only
+```
+
+バックアップファイルは `backups/` ディレクトリに保存されます：
+
+- `db_backup_YYYYMMDD_HHMMSS.dump` - PostgreSQLバックアップ
+- `minio_backup_YYYYMMDD_HHMMSS.tar.gz` - MinIOバックアップ
+
+#### 復元
+
+バックアップからデータを復元します。
+
+```bash
+# 利用可能なバックアップを一覧表示
+./scripts/restore.sh --list
+
+# 最新のバックアップから復元
+./scripts/restore.sh --latest
+
+# 特定のタイムスタンプから復元
+./scripts/restore.sh 20251213_022344
+```
+
+**注意**: 復元操作は現在のデータを上書きします。実行前に確認プロンプトが表示されます。
+
+#### 自動バックアップの設定
+
+毎日自動でバックアップを実行するには、ホストマシンのcronに設定を追加します。
+
+```bash
+# crontabを編集
+crontab -e
+
+# 以下の行を追加（毎日午前2時に実行）
+0 2 * * * /path/to/notedock/scripts/backup.sh >> /var/log/notedock_backup.log 2>&1
+```
+
+**設定例（絶対パスを使用）:**
+
+```bash
+# 毎日午前2時にバックアップ
+0 2 * * * /home/username/projects/notedock/scripts/backup.sh >> /var/log/notedock_backup.log 2>&1
+
+# 毎日午前2時と14時にバックアップ（1日2回）
+0 2,14 * * * /home/username/projects/notedock/scripts/backup.sh >> /var/log/notedock_backup.log 2>&1
+
+# 毎週日曜日の午前3時にバックアップ
+0 3 * * 0 /home/username/projects/notedock/scripts/backup.sh >> /var/log/notedock_backup.log 2>&1
+```
+
+**設定の確認:**
+
+```bash
+# 現在のcron設定を確認
+crontab -l
+
+# バックアップログを確認
+tail -f /var/log/notedock_backup.log
+```
+
+**注意事項:**
+
+- バックアップスクリプトはDockerコンテナが起動している必要があります
+- バックアップファイルは `backups/` ディレクトリに保存されます
+- 古いバックアップは自動削除されません。定期的に手動で削除するか、以下のようにcronで古いファイルを削除してください：
+
+```bash
+# 30日以上前のバックアップを削除（バックアップの直後に実行）
+0 3 * * * find /path/to/notedock/backups -name "*.dump" -mtime +30 -delete
+0 3 * * * find /path/to/notedock/backups -name "*.tar.gz" -mtime +30 -delete
+```
+
 ## ディレクトリ構成
 
 ```text
@@ -299,6 +426,10 @@ notedock/
 | GET | /api/tags | タグ一覧 |
 | POST | /api/files/upload | ファイルアップロード |
 | GET | /api/linkmap | リンクマップデータ |
+| GET | /api/v1/settings/models | 利用可能なAIモデル一覧 |
+| POST | /api/v1/ai/generate | AI生成 |
+| POST | /api/v1/ai/summarize/{note_id} | ノート要約 |
+| POST | /api/v1/ai/ask/{note_id} | 質問応答 |
 | GET | /api/folders | フォルダ一覧（ツリー構造） |
 | POST | /api/folders | フォルダ作成 |
 | PUT | /api/folders/{id} | フォルダ更新 |
@@ -312,7 +443,3 @@ notedock/
 - [設計メモ](docs/design.md)
 - [AIコーディングガイド](docs/coding_guide.md)
 - [タスクリスト](docs/tasks.md)
-
-## ライセンス
-
-MIT License
