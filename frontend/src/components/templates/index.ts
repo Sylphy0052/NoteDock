@@ -1,2 +1,2 @@
-export { TemplateSelectModal } from "./TemplateSelectModal";
-export { SaveAsTemplateModal } from "./SaveAsTemplateModal";
+export { TemplateSelectModal } from './TemplateSelectModal'
+export { SaveAsTemplateModal } from './SaveAsTemplateModal'

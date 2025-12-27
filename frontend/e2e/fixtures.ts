@@ -23,8 +23,17 @@ export const testData = {
 
 /**
  * APIのベースURL
+ * VITE_API_URLから取得し、/api サフィックスを除去して使用
+ * .envファイルはplaywright.config.tsで読み込まれる
  */
-export const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:8000';
+export const API_BASE_URL = (() => {
+  const viteApiUrl = process.env.VITE_API_URL;
+  if (viteApiUrl) {
+    // VITE_API_URLから/apiを除去してベースURLを取得
+    return viteApiUrl.replace(/\/api\/?$/, '');
+  }
+  return process.env.API_BASE_URL || 'http://localhost:8000';
+})();
 
 /**
  * APIモック用のヘルパー関数
@@ -263,6 +272,237 @@ export class ApiMockHelper {
       }
     });
   }
+
+  /**
+   * AI ステータスAPIをモック
+   */
+  async mockAIStatus(enabled: boolean = true, defaultModel: string = 'default') {
+    await this.page.route(`${API_BASE_URL}/api/ai/status`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ enabled, defaultModel }),
+      });
+    });
+  }
+
+  /**
+   * AI 生成APIをモック（ストリーミングレスポンス）
+   */
+  async mockAIGenerate(responseContent: string = 'AIが生成したコンテンツです。') {
+    await this.page.route(`${API_BASE_URL}/api/ai/generate`, async (route) => {
+      // NDJSON形式でストリーミングレスポンスをシミュレート
+      const events = [
+        { type: 'add_message_token', token: responseContent },
+        { type: 'add_bot_message_id', id: 'msg_test_123' },
+      ];
+      const body = events.map(e => JSON.stringify(e)).join('\n') + '\n';
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/x-ndjson',
+        body,
+      });
+    });
+  }
+
+  /**
+   * AI 要約APIをモック（ストリーミングレスポンス）
+   */
+  async mockAISummarize(summary: string = 'これはノートの要約です。') {
+    await this.page.route(`${API_BASE_URL}/api/ai/summarize`, async (route) => {
+      const events = [
+        { type: 'add_message_token', token: summary },
+        { type: 'add_bot_message_id', id: 'msg_test_456' },
+      ];
+      const body = events.map(e => JSON.stringify(e)).join('\n') + '\n';
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/x-ndjson',
+        body,
+      });
+    });
+  }
+
+  /**
+   * AI 質問APIをモック（ストリーミングレスポンス）
+   */
+  async mockAIAsk(answer: string = 'これはAIの回答です。') {
+    await this.page.route(`${API_BASE_URL}/api/ai/ask`, async (route) => {
+      const events = [
+        { type: 'add_message_token', token: answer },
+        { type: 'add_bot_message_id', id: 'msg_test_789' },
+      ];
+      const body = events.map(e => JSON.stringify(e)).join('\n') + '\n';
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/x-ndjson',
+        body,
+      });
+    });
+  }
+
+  /**
+   * AI アシストAPIをモック（ストリーミングレスポンス）
+   */
+  async mockAIAssist(improvedContent: string = '改善されたコンテンツです。') {
+    await this.page.route(`${API_BASE_URL}/api/ai/assist`, async (route) => {
+      const events = [
+        { type: 'add_message_token', token: improvedContent },
+        { type: 'add_bot_message_id', id: 'msg_test_abc' },
+      ];
+      const body = events.map(e => JSON.stringify(e)).join('\n') + '\n';
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/x-ndjson',
+        body,
+      });
+    });
+  }
+
+  /**
+   * AI フォルダ要約APIをモック（ストリーミングレスポンス）
+   */
+  async mockAIFolderSummarize(summary: string = 'フォルダ内ノートの要約です。') {
+    await this.page.route(`${API_BASE_URL}/api/ai/folder/summarize`, async (route) => {
+      const events = [
+        { type: 'add_message_token', token: summary },
+        { type: 'add_bot_message_id', id: 'msg_folder_sum_123' },
+      ];
+      const body = events.map(e => JSON.stringify(e)).join('\n') + '\n';
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/x-ndjson',
+        body,
+      });
+    });
+  }
+
+  /**
+   * AI フォルダ質問APIをモック（ストリーミングレスポンス）
+   */
+  async mockAIFolderAsk(answer: string = 'フォルダ内のノートに基づく回答です。') {
+    await this.page.route(`${API_BASE_URL}/api/ai/folder/ask`, async (route) => {
+      const events = [
+        { type: 'add_message_token', token: answer },
+        { type: 'add_bot_message_id', id: 'msg_folder_ask_123' },
+      ];
+      const body = events.map(e => JSON.stringify(e)).join('\n') + '\n';
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/x-ndjson',
+        body,
+      });
+    });
+  }
+
+  /**
+   * 会社一覧APIをモック
+   */
+  async mockCompaniesList(companies: any[] = []) {
+    await this.page.route(`${API_BASE_URL}/api/companies**`, async (route) => {
+      const url = route.request().url();
+      // 個別会社リクエストは除外
+      if (/\/api\/companies\/\d+/.test(url)) {
+        await route.continue();
+        return;
+      }
+      if (route.request().method() === 'GET') {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            items: companies,
+            total: companies.length,
+            page: 1,
+            page_size: 100,
+          }),
+        });
+      } else {
+        await route.continue();
+      }
+    });
+  }
+
+  /**
+   * プロジェクト一覧APIをモック
+   */
+  async mockProjectsList(projects: any[] = []) {
+    await this.page.route(`${API_BASE_URL}/api/projects**`, async (route) => {
+      const url = route.request().url();
+      // 個別プロジェクトリクエストや特殊エンドポイントは除外
+      if (/\/api\/projects\/\d+/.test(url)) {
+        await route.continue();
+        return;
+      }
+      if (route.request().method() === 'GET') {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            items: projects,
+            total: projects.length,
+            page: 1,
+            page_size: 100,
+          }),
+        });
+      } else {
+        await route.continue();
+      }
+    });
+  }
+
+  /**
+   * 単一プロジェクトAPIをモック
+   */
+  async mockProject(project: any) {
+    await this.page.route(`${API_BASE_URL}/api/projects/${project.id}`, async (route) => {
+      if (route.request().method() === 'GET') {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(project),
+        });
+      } else {
+        await route.continue();
+      }
+    });
+  }
+
+  /**
+   * プロジェクトノート一覧APIをモック
+   */
+  async mockProjectNotes(projectId: number, notes: any[] = []) {
+    await this.page.route(`${API_BASE_URL}/api/projects/${projectId}/notes`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          items: notes,
+          total: notes.length,
+          page: 1,
+          page_size: 100,
+        }),
+      });
+    });
+  }
+
+  /**
+   * AI プロジェクト質問APIをモック（ストリーミングレスポンス）
+   */
+  async mockAIProjectAsk(answer: string = 'プロジェクト内のノートに基づく回答です。') {
+    await this.page.route(`${API_BASE_URL}/api/ai/project/ask`, async (route) => {
+      const events = [
+        { type: 'add_message_token', token: answer },
+        { type: 'add_bot_message_id', id: 'msg_project_ask_123' },
+      ];
+      const body = events.map(e => JSON.stringify(e)).join('\n') + '\n';
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/x-ndjson',
+        body,
+      });
+    });
+  }
 }
 
 /**
@@ -404,6 +644,30 @@ export function createSampleTemplate(overrides: Partial<any> = {}) {
   };
 }
 
+export function createSampleCompany(overrides: Partial<any> = {}) {
+  return {
+    id: 1,
+    name: 'サンプル会社',
+    project_count: 0,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    ...overrides,
+  };
+}
+
+export function createSampleProject(overrides: Partial<any> = {}) {
+  return {
+    id: 1,
+    name: 'サンプルプロジェクト',
+    company_id: null,
+    company: null,
+    note_count: 0,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    ...overrides,
+  };
+}
+
 /**
  * 拡張テストフィクスチャ
  */
@@ -418,5 +682,16 @@ export const test = base.extend<{
     await use(new PageHelper(page));
   },
 });
+
+/**
+ * テスト用に表示名を設定するヘルパー関数
+ * ノート編集ページは表示名が設定されていないと編集できないため、
+ * テスト開始前にこの関数を呼び出す必要がある
+ */
+export async function setupDisplayName(page: Page, displayName: string = 'E2Eテストユーザー') {
+  await page.addInitScript((name) => {
+    localStorage.setItem('notedock_display_name', name);
+  }, displayName);
+}
 
 export { expect };

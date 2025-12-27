@@ -1,4 +1,4 @@
-import { test, expect, createSampleNote, createSampleFolder, createSampleTag, createSampleTemplate, API_BASE_URL } from './fixtures';
+import { test, expect, createSampleNote, createSampleFolder, createSampleTag, createSampleTemplate, API_BASE_URL, setupDisplayName } from './fixtures';
 import { Page } from '@playwright/test';
 
 /**
@@ -25,6 +25,8 @@ async function closeTemplateModalIfOpen(page: Page) {
 test.describe('ノート編集ページ', () => {
   test.describe('新規作成', () => {
     test.beforeEach(async ({ page, apiMock }) => {
+      // 表示名を設定（ノート編集ページは表示名が必要）
+      await setupDisplayName(page);
       await apiMock.mockFoldersList([]);
       await apiMock.mockTagsList([]);
       await apiMock.mockDraft(null);
@@ -162,6 +164,8 @@ test.describe('ノート編集ページ', () => {
     });
 
     test.beforeEach(async ({ page, apiMock }) => {
+      // 表示名を設定（ノート編集ページは表示名が必要）
+      await setupDisplayName(page);
       await apiMock.mockFoldersList([]);
       await apiMock.mockTagsList([]);
       await apiMock.mockNote(existingNote);
@@ -243,6 +247,8 @@ test.describe('ノート編集ページ', () => {
 
   test.describe('エディタツールバー', () => {
     test.beforeEach(async ({ page, apiMock }) => {
+      // 表示名を設定（ノート編集ページは表示名が必要）
+      await setupDisplayName(page);
       await apiMock.mockFoldersList([]);
       await apiMock.mockTagsList([]);
       await apiMock.mockDraft(null);
@@ -374,6 +380,8 @@ test.describe('ノート編集ページ', () => {
 
   test.describe('タグ入力', () => {
     test.beforeEach(async ({ page, apiMock }) => {
+      // 表示名を設定（ノート編集ページは表示名が必要）
+      await setupDisplayName(page);
       await apiMock.mockFoldersList([]);
       await apiMock.mockDraft(null);
       await apiMock.mockTemplates([]);
@@ -421,6 +429,8 @@ test.describe('ノート編集ページ', () => {
 
   test.describe('フォルダ選択', () => {
     test.beforeEach(async ({ page, apiMock }) => {
+      // 表示名を設定（ノート編集ページは表示名が必要）
+      await setupDisplayName(page);
       await apiMock.mockTagsList([]);
       await apiMock.mockDraft(null);
       await apiMock.mockTemplates([]);
@@ -446,6 +456,8 @@ test.describe('ノート編集ページ', () => {
 
   test.describe('ファイルアップロード', () => {
     test.beforeEach(async ({ page, apiMock }) => {
+      // 表示名を設定（ノート編集ページは表示名が必要）
+      await setupDisplayName(page);
       await apiMock.mockFoldersList([]);
       await apiMock.mockTagsList([]);
       await apiMock.mockDraft(null);
@@ -490,6 +502,8 @@ test.describe('ノート編集ページ', () => {
 
   test.describe('テンプレート保存', () => {
     test.beforeEach(async ({ page, apiMock }) => {
+      // 表示名を設定（ノート編集ページは表示名が必要）
+      await setupDisplayName(page);
       await apiMock.mockFoldersList([]);
       await apiMock.mockTagsList([]);
       await apiMock.mockDraft(null);
@@ -537,6 +551,8 @@ test.describe('ノート編集ページ', () => {
 
   test.describe('ノートリンク挿入', () => {
     test.beforeEach(async ({ page, apiMock }) => {
+      // 表示名を設定（ノート編集ページは表示名が必要）
+      await setupDisplayName(page);
       await apiMock.mockFoldersList([]);
       await apiMock.mockTagsList([]);
       await apiMock.mockDraft(null);
@@ -580,6 +596,8 @@ test.describe('ノート編集ページ', () => {
 
   test.describe('ドラフト自動保存', () => {
     test.beforeEach(async ({ page, apiMock }) => {
+      // 表示名を設定（ノート編集ページは表示名が必要）
+      await setupDisplayName(page);
       await apiMock.mockFoldersList([]);
       await apiMock.mockTagsList([]);
       await apiMock.mockDraft(null);

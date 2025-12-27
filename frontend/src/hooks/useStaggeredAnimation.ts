@@ -1,12 +1,12 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef } from 'react'
 
 interface UseStaggeredAnimationOptions {
   /** Delay between each item's animation start (ms) */
-  staggerDelay?: number;
+  staggerDelay?: number
   /** Whether to re-animate when items change */
-  reanimateOnChange?: boolean;
+  reanimateOnChange?: boolean
   /** Whether the animation is enabled */
-  enabled?: boolean;
+  enabled?: boolean
 }
 
 /**
@@ -21,62 +21,63 @@ export function useStaggeredAnimation(
   itemCount: number,
   options: UseStaggeredAnimationOptions = {}
 ) {
-  const { staggerDelay = 50, reanimateOnChange = false, enabled = true } = options;
+  const { staggerDelay = 50, reanimateOnChange = false, enabled = true } = options
 
-  const [hasAnimated, setHasAnimated] = useState(false);
-  const previousCountRef = useRef(itemCount);
+  const [hasAnimated, setHasAnimated] = useState(false)
+  const previousCountRef = useRef(itemCount)
 
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled) return
 
     // Check if we should animate
-    const shouldAnimate = !hasAnimated || (reanimateOnChange && itemCount !== previousCountRef.current);
+    const shouldAnimate =
+      !hasAnimated || (reanimateOnChange && itemCount !== previousCountRef.current)
 
     if (shouldAnimate && itemCount > 0) {
       // Set animated after all animations would have completed
-      const totalDuration = itemCount * staggerDelay + 250; // 250ms is the animation duration
+      const totalDuration = itemCount * staggerDelay + 250 // 250ms is the animation duration
       const timer = setTimeout(() => {
-        setHasAnimated(true);
-      }, totalDuration);
+        setHasAnimated(true)
+      }, totalDuration)
 
-      return () => clearTimeout(timer);
+      return () => clearTimeout(timer)
     }
 
-    previousCountRef.current = itemCount;
-  }, [itemCount, hasAnimated, reanimateOnChange, staggerDelay, enabled]);
+    previousCountRef.current = itemCount
+  }, [itemCount, hasAnimated, reanimateOnChange, staggerDelay, enabled])
 
   // Reset animation state when enabled changes to false then true
   useEffect(() => {
     if (!enabled) {
-      setHasAnimated(false);
+      setHasAnimated(false)
     }
-  }, [enabled]);
+  }, [enabled])
 
   return {
     shouldAnimate: enabled && !hasAnimated,
-    className: enabled && !hasAnimated ? "animate-in" : "",
-  };
+    className: enabled && !hasAnimated ? 'animate-in' : '',
+  }
 }
 
 /**
  * Simple hook to get animation class for a specific item index
  */
 export function useItemAnimation(index: number, shouldAnimate: boolean) {
-  const [isAnimated, setIsAnimated] = useState(!shouldAnimate);
+  const [isAnimated, setIsAnimated] = useState(!shouldAnimate)
 
   useEffect(() => {
-    if (!shouldAnimate) return;
+    if (!shouldAnimate) return
 
-    const delay = index * 50; // 50ms stagger
+    const delay = index * 50 // 50ms stagger
     const timer = setTimeout(() => {
-      setIsAnimated(true);
-    }, delay + 250); // Add animation duration
+      setIsAnimated(true)
+    }, delay + 250) // Add animation duration
 
-    return () => clearTimeout(timer);
-  }, [index, shouldAnimate]);
+    return () => clearTimeout(timer)
+  }, [index, shouldAnimate])
 
   return {
-    className: shouldAnimate && !isAnimated ? "animate-in" : "",
+    className: shouldAnimate && !isAnimated ? 'animate-in' : '',
     isAnimated,
-  };
+  }
 }

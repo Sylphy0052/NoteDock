@@ -1,64 +1,67 @@
-import { Keyboard } from "lucide-react";
-import Modal from "./Modal";
+import { Keyboard } from 'lucide-react'
+import Modal from './Modal'
 
 interface KeyboardShortcutsModalProps {
-  isOpen: boolean;
-  onClose: () => void;
+  isOpen: boolean
+  onClose: () => void
 }
 
 interface ShortcutItem {
-  keys: string[];
-  description: string;
+  keys: string[]
+  description: string
 }
 
 interface ShortcutGroup {
-  title: string;
-  shortcuts: ShortcutItem[];
+  title: string
+  shortcuts: ShortcutItem[]
 }
 
 const shortcutGroups: ShortcutGroup[] = [
   {
-    title: "グローバル",
+    title: 'グローバル',
     shortcuts: [
-      { keys: ["Ctrl", "K"], description: "クイックオープン" },
-      { keys: ["Ctrl", "N"], description: "新規ノート作成" },
-      { keys: ["?"], description: "ショートカット一覧を表示" },
+      { keys: ['Ctrl', 'K'], description: 'クイックオープン' },
+      { keys: ['Ctrl', 'N'], description: '新規ノート作成' },
+      { keys: ['?'], description: 'ショートカット一覧を表示' },
     ],
   },
   {
-    title: "エディタ",
+    title: 'エディタ',
     shortcuts: [
-      { keys: ["Ctrl", "S"], description: "保存" },
-      { keys: ["Ctrl", "B"], description: "太字" },
-      { keys: ["Ctrl", "I"], description: "斜体" },
-      { keys: ["Ctrl", "Shift", "S"], description: "取り消し線" },
-      { keys: ["Ctrl", "Shift", "K"], description: "コードブロック" },
-      { keys: ["Ctrl", "Shift", "L"], description: "リンク挿入" },
-      { keys: ["Ctrl", "Shift", "I"], description: "画像挿入" },
+      { keys: ['Ctrl', 'S'], description: '保存' },
+      { keys: ['Ctrl', 'B'], description: '太字' },
+      { keys: ['Ctrl', 'I'], description: '斜体' },
+      { keys: ['Ctrl', 'Shift', 'S'], description: '取り消し線' },
+      { keys: ['Ctrl', 'Shift', 'K'], description: 'コードブロック' },
+      { keys: ['Ctrl', 'Shift', 'L'], description: 'リンク挿入' },
+      { keys: ['Ctrl', 'Shift', 'I'], description: '画像挿入' },
     ],
   },
   {
-    title: "クイックオープン",
+    title: 'クイックオープン',
     shortcuts: [
-      { keys: ["↑", "↓"], description: "候補を移動" },
-      { keys: ["Enter"], description: "選択したノートを開く" },
-      { keys: ["Esc"], description: "閉じる" },
+      { keys: ['↑', '↓'], description: '候補を移動' },
+      { keys: ['Enter'], description: '選択したノートを開く' },
+      { keys: ['Esc'], description: '閉じる' },
     ],
   },
   {
-    title: "ノート一覧",
+    title: 'ノート一覧',
     shortcuts: [
-      { keys: ["J"], description: "次のノートへ" },
-      { keys: ["K"], description: "前のノートへ" },
-      { keys: ["Enter"], description: "ノートを開く" },
+      { keys: ['J'], description: '次のノートへ' },
+      { keys: ['K'], description: '前のノートへ' },
+      { keys: ['Enter'], description: 'ノートを開く' },
     ],
   },
-];
+  {
+    title: 'AI機能',
+    shortcuts: [
+      { keys: ['Ctrl', 'Alt', 'A'], description: 'AIアシスト（選択テキストを修正）' },
+    ],
+  },
+]
 
-export default function KeyboardShortcutsModal({
-  isOpen,
-  onClose,
-}: KeyboardShortcutsModalProps) {
+export default function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShortcutsModalProps) {
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="キーボードショートカット" size="md">
       <div className="shortcuts-content">
@@ -89,5 +92,5 @@ export default function KeyboardShortcutsModal({
         ))}
       </div>
     </Modal>
-  );
+  )
 }

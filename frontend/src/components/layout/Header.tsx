@@ -1,66 +1,58 @@
-import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
-import {
-  Search,
-  Moon,
-  Sun,
-  Settings,
-  Command,
-  Ship,
-  Keyboard,
-} from "lucide-react";
-import { useTheme } from "../../hooks/useTheme";
-import QuickOpenModal from "../common/QuickOpenModal";
-import KeyboardShortcutsModal from "../common/KeyboardShortcutsModal";
+import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
+import { Search, Moon, Sun, Settings, Command, Ship, Keyboard } from 'lucide-react'
+import { useTheme } from '../../hooks/useTheme'
+import QuickOpenModal from '../common/QuickOpenModal'
+import KeyboardShortcutsModal from '../common/KeyboardShortcutsModal'
 
 interface HeaderProps {
-  onSearch?: (query: string) => void;
+  onSearch?: (query: string) => void
 }
 
 export default function Header({ onSearch }: HeaderProps) {
-  const { theme, toggleTheme } = useTheme();
-  const [searchQuery, setSearchQuery] = useState("");
-  const [isQuickOpenOpen, setIsQuickOpenOpen] = useState(false);
+  const { theme, toggleTheme } = useTheme()
+  const [searchQuery, setSearchQuery] = useState('')
+  const [isQuickOpenOpen, setIsQuickOpenOpen] = useState(false)
   const [displayName, setDisplayName] = useState(
-    () => localStorage.getItem("notedock_display_name") || ""
-  );
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
+    () => localStorage.getItem('notedock_display_name') || ''
+  )
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+  const [isShortcutsOpen, setIsShortcutsOpen] = useState(false)
 
   const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSearch?.(searchQuery);
-  };
+    e.preventDefault()
+    onSearch?.(searchQuery)
+  }
 
   const handleDisplayNameSave = () => {
-    localStorage.setItem("notedock_display_name", displayName);
-    setIsSettingsOpen(false);
-  };
+    localStorage.setItem('notedock_display_name', displayName)
+    setIsSettingsOpen(false)
+  }
 
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Ignore if user is typing in an input field
-      const target = e.target as HTMLElement;
-      if (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable) {
-        return;
+      const target = e.target as HTMLElement
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+        return
       }
 
       // Ctrl+K: Quick open
-      if ((e.ctrlKey || e.metaKey) && e.key === "k") {
-        e.preventDefault();
-        setIsQuickOpenOpen(true);
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault()
+        setIsQuickOpenOpen(true)
       }
 
       // ?: Keyboard shortcuts help
-      if (e.key === "?" && !e.ctrlKey && !e.metaKey) {
-        e.preventDefault();
-        setIsShortcutsOpen(true);
+      if (e.key === '?' && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault()
+        setIsShortcutsOpen(true)
       }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
 
   return (
     <>
@@ -109,9 +101,13 @@ export default function Header({ onSearch }: HeaderProps) {
           <button
             className="icon-button"
             onClick={toggleTheme}
-            title={theme === "light" ? "ダークモードに切替" : "ライトモードに切替"}
+            title={theme === 'light' ? 'ダークモードに切替' : 'ライトモードに切替'}
           >
-            {theme === "light" ? <Moon size={20} strokeWidth={2.5} fill="currentColor" /> : <Sun size={20} strokeWidth={2.5} fill="currentColor" />}
+            {theme === 'light' ? (
+              <Moon size={20} strokeWidth={2.5} fill="currentColor" />
+            ) : (
+              <Sun size={20} strokeWidth={2.5} fill="currentColor" />
+            )}
           </button>
           <button
             className="icon-button"
@@ -142,15 +138,9 @@ export default function Header({ onSearch }: HeaderProps) {
         )}
       </header>
 
-      <QuickOpenModal
-        isOpen={isQuickOpenOpen}
-        onClose={() => setIsQuickOpenOpen(false)}
-      />
+      <QuickOpenModal isOpen={isQuickOpenOpen} onClose={() => setIsQuickOpenOpen(false)} />
 
-      <KeyboardShortcutsModal
-        isOpen={isShortcutsOpen}
-        onClose={() => setIsShortcutsOpen(false)}
-      />
+      <KeyboardShortcutsModal isOpen={isShortcutsOpen} onClose={() => setIsShortcutsOpen(false)} />
     </>
-  );
+  )
 }

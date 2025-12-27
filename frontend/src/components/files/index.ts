@@ -1,3 +1,9 @@
-export { FileUploader } from "./FileUploader";
-export { FileViewerModal } from "./FileViewerModal";
-export { PptxViewer } from "./PptxViewer";
+export { FileUploader } from './FileUploader'
+export { FileViewerModal } from './FileViewerModal'
+export { PptxViewer } from './PptxViewer'
+export { DocxViewer } from './DocxViewer'
+export { XlsxViewer } from './XlsxViewer'
+export { CsvViewer } from './CsvViewer'
+export { MarkdownFileViewer } from './MarkdownFileViewer'
+export { PdfThumbnail } from './PdfThumbnail'
+export { default as FileCard } from './FileCard'

@@ -1,115 +1,115 @@
-import { useState, useRef, useCallback } from "react";
-import { X, Upload, Image as ImageIcon, Link as LinkIcon } from "lucide-react";
-import { uploadFile, getFileDownloadUrl } from "../../api/files";
+import { useState, useRef, useCallback } from 'react'
+import { X, Upload, Image as ImageIcon, Link as LinkIcon } from 'lucide-react'
+import { uploadFile, getFileDownloadUrl } from '../../api/files'
 
 interface ImageInsertModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onInsert: (markdown: string) => void;
+  isOpen: boolean
+  onClose: () => void
+  onInsert: (markdown: string) => void
 }
 
 export function ImageInsertModal({ isOpen, onClose, onInsert }: ImageInsertModalProps) {
-  const [mode, setMode] = useState<"upload" | "url">("upload");
-  const [imageUrl, setImageUrl] = useState("");
-  const [altText, setAltText] = useState("");
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const dropZoneRef = useRef<HTMLDivElement>(null);
-  const [isDragging, setIsDragging] = useState(false);
+  const [mode, setMode] = useState<'upload' | 'url'>('upload')
+  const [imageUrl, setImageUrl] = useState('')
+  const [altText, setAltText] = useState('')
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [isUploading, setIsUploading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const dropZoneRef = useRef<HTMLDivElement>(null)
+  const [isDragging, setIsDragging] = useState(false)
 
   const resetState = useCallback(() => {
-    setMode("upload");
-    setImageUrl("");
-    setAltText("");
-    setPreviewUrl(null);
-    setError(null);
-    setIsUploading(false);
-    setIsDragging(false);
-  }, []);
+    setMode('upload')
+    setImageUrl('')
+    setAltText('')
+    setPreviewUrl(null)
+    setError(null)
+    setIsUploading(false)
+    setIsDragging(false)
+  }, [])
 
   const handleClose = () => {
-    resetState();
-    onClose();
-  };
+    resetState()
+    onClose()
+  }
 
   const handleFileSelect = async (file: File) => {
-    if (!file.type.startsWith("image/")) {
-      setError("画像ファイルを選択してください");
-      return;
+    if (!file.type.startsWith('image/')) {
+      setError('画像ファイルを選択してください')
+      return
     }
 
-    setError(null);
-    setIsUploading(true);
+    setError(null)
+    setIsUploading(true)
 
     // Show local preview immediately
-    const localPreview = URL.createObjectURL(file);
-    setPreviewUrl(localPreview);
-    setAltText(file.name.replace(/\.[^.]+$/, ""));
+    const localPreview = URL.createObjectURL(file)
+    setPreviewUrl(localPreview)
+    setAltText(file.name.replace(/\.[^.]+$/, ''))
 
     try {
-      const data = await uploadFile(file);
-      const url = await getFileDownloadUrl(data.id);
-      setImageUrl(url);
-      setIsUploading(false);
+      const data = await uploadFile(file)
+      const url = await getFileDownloadUrl(data.id)
+      setImageUrl(url)
+      setIsUploading(false)
     } catch (err) {
-      setError("画像のアップロードに失敗しました");
-      setIsUploading(false);
-      setPreviewUrl(null);
-      URL.revokeObjectURL(localPreview);
+      setError('画像のアップロードに失敗しました')
+      setIsUploading(false)
+      setPreviewUrl(null)
+      URL.revokeObjectURL(localPreview)
     }
-  };
+  }
 
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+    const file = e.target.files?.[0]
     if (file) {
-      handleFileSelect(file);
+      handleFileSelect(file)
     }
-  };
+  }
 
   const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(true);
-  };
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(true)
+  }
 
   const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
-  };
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(false)
+  }
 
   const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(false)
 
-    const file = e.dataTransfer.files[0];
+    const file = e.dataTransfer.files[0]
     if (file) {
-      handleFileSelect(file);
+      handleFileSelect(file)
     }
-  };
+  }
 
   const handleUrlChange = (url: string) => {
-    setImageUrl(url);
-    setPreviewUrl(url);
-    setError(null);
-  };
+    setImageUrl(url)
+    setPreviewUrl(url)
+    setError(null)
+  }
 
   const handleInsert = () => {
     if (!imageUrl) {
-      setError("画像URLを入力してください");
-      return;
+      setError('画像URLを入力してください')
+      return
     }
 
-    const alt = altText || "image";
-    const markdown = `![${alt}](${imageUrl})`;
-    onInsert(markdown);
-    handleClose();
-  };
+    const alt = altText || 'image'
+    const markdown = `![${alt}](${imageUrl})`
+    onInsert(markdown)
+    handleClose()
+  }
 
-  if (!isOpen) return null;
+  if (!isOpen) return null
 
   return (
     <div className="modal-overlay" onClick={handleClose}>
@@ -128,25 +128,25 @@ export function ImageInsertModal({ isOpen, onClose, onInsert }: ImageInsertModal
           {/* Mode tabs */}
           <div className="image-insert-tabs">
             <button
-              className={`tab ${mode === "upload" ? "active" : ""}`}
-              onClick={() => setMode("upload")}
+              className={`tab ${mode === 'upload' ? 'active' : ''}`}
+              onClick={() => setMode('upload')}
             >
               <Upload size={16} />
               アップロード
             </button>
             <button
-              className={`tab ${mode === "url" ? "active" : ""}`}
-              onClick={() => setMode("url")}
+              className={`tab ${mode === 'url' ? 'active' : ''}`}
+              onClick={() => setMode('url')}
             >
               <LinkIcon size={16} />
               URL
             </button>
           </div>
 
-          {mode === "upload" ? (
+          {mode === 'upload' ? (
             <div
               ref={dropZoneRef}
-              className={`image-drop-zone ${isDragging ? "dragging" : ""} ${previewUrl ? "has-preview" : ""}`}
+              className={`image-drop-zone ${isDragging ? 'dragging' : ''} ${previewUrl ? 'has-preview' : ''}`}
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
@@ -164,8 +164,8 @@ export function ImageInsertModal({ isOpen, onClose, onInsert }: ImageInsertModal
                   <button
                     className="change-image-btn"
                     onClick={(e) => {
-                      e.stopPropagation();
-                      fileInputRef.current?.click();
+                      e.stopPropagation()
+                      fileInputRef.current?.click()
                     }}
                   >
                     画像を変更
@@ -195,8 +195,8 @@ export function ImageInsertModal({ isOpen, onClose, onInsert }: ImageInsertModal
                     src={previewUrl}
                     alt="プレビュー"
                     onError={() => {
-                      setPreviewUrl(null);
-                      setError("画像を読み込めませんでした");
+                      setPreviewUrl(null)
+                      setError('画像を読み込めませんでした')
                     }}
                   />
                 </div>
@@ -214,9 +214,7 @@ export function ImageInsertModal({ isOpen, onClose, onInsert }: ImageInsertModal
               placeholder="画像の説明を入力"
               className="alt-input"
             />
-            <p className="alt-hint">
-              画像が表示されない場合やスクリーンリーダー用に表示されます
-            </p>
+            <p className="alt-hint">画像が表示されない場合やスクリーンリーダー用に表示されます</p>
           </div>
 
           {error && <div className="image-insert-error">{error}</div>}
@@ -227,7 +225,7 @@ export function ImageInsertModal({ isOpen, onClose, onInsert }: ImageInsertModal
             type="file"
             accept="image/*"
             onChange={handleFileInputChange}
-            style={{ display: "none" }}
+            style={{ display: 'none' }}
           />
         </div>
 
@@ -245,5 +243,5 @@ export function ImageInsertModal({ isOpen, onClose, onInsert }: ImageInsertModal
         </footer>
       </div>
     </div>
-  );
+  )
 }

@@ -1,11 +1,11 @@
-import { ChevronLeft, ChevronRight } from "lucide-react";
-import clsx from "clsx";
+import { ChevronLeft, ChevronRight } from 'lucide-react'
+import clsx from 'clsx'
 
 interface PaginationProps {
-  currentPage: number;
-  totalPages: number;
-  onPageChange: (page: number) => void;
-  className?: string;
+  currentPage: number
+  totalPages: number
+  onPageChange: (page: number) => void
+  className?: string
 }
 
 export default function Pagination({
@@ -14,51 +14,51 @@ export default function Pagination({
   onPageChange,
   className,
 }: PaginationProps) {
-  if (totalPages <= 1) return null;
+  if (totalPages <= 1) return null
 
   const getPageNumbers = () => {
-    const pages: (number | "...")[] = [];
-    const showEllipsisStart = currentPage > 3;
-    const showEllipsisEnd = currentPage < totalPages - 2;
+    const pages: (number | '...')[] = []
+    const showEllipsisStart = currentPage > 3
+    const showEllipsisEnd = currentPage < totalPages - 2
 
     if (totalPages <= 7) {
       // Show all pages
       for (let i = 1; i <= totalPages; i++) {
-        pages.push(i);
+        pages.push(i)
       }
     } else {
       // Always show first page
-      pages.push(1);
+      pages.push(1)
 
       if (showEllipsisStart) {
-        pages.push("...");
+        pages.push('...')
       }
 
       // Show pages around current page
-      const start = Math.max(2, currentPage - 1);
-      const end = Math.min(totalPages - 1, currentPage + 1);
+      const start = Math.max(2, currentPage - 1)
+      const end = Math.min(totalPages - 1, currentPage + 1)
 
       for (let i = start; i <= end; i++) {
         if (!pages.includes(i)) {
-          pages.push(i);
+          pages.push(i)
         }
       }
 
       if (showEllipsisEnd) {
-        pages.push("...");
+        pages.push('...')
       }
 
       // Always show last page
       if (!pages.includes(totalPages)) {
-        pages.push(totalPages);
+        pages.push(totalPages)
       }
     }
 
-    return pages;
-  };
+    return pages
+  }
 
   return (
-    <nav className={clsx("pagination", className)} aria-label="ページネーション">
+    <nav className={clsx('pagination', className)} aria-label="ページネーション">
       <button
         className="pagination-button"
         onClick={() => onPageChange(currentPage - 1)}
@@ -70,19 +70,16 @@ export default function Pagination({
 
       <div className="pagination-pages">
         {getPageNumbers().map((page, index) =>
-          page === "..." ? (
+          page === '...' ? (
             <span key={`ellipsis-${index}`} className="pagination-ellipsis">
               ...
             </span>
           ) : (
             <button
               key={page}
-              className={clsx(
-                "pagination-page",
-                page === currentPage && "active"
-              )}
+              className={clsx('pagination-page', page === currentPage && 'active')}
               onClick={() => onPageChange(page)}
-              aria-current={page === currentPage ? "page" : undefined}
+              aria-current={page === currentPage ? 'page' : undefined}
             >
               {page}
             </button>
@@ -99,5 +96,5 @@ export default function Pagination({
         <ChevronRight size={18} />
       </button>
     </nav>
-  );
+  )
 }

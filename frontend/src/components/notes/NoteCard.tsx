@@ -1,31 +1,31 @@
-import { Link } from "react-router-dom";
-import { Pin, Lock, Tag } from "lucide-react";
-import type { NoteSummary } from "../../api/types";
-import { getFileUrl } from "../../utils/api";
-import clsx from "clsx";
+import { Link } from 'react-router-dom'
+import { Pin, Lock, Tag, User, Eye, FolderKanban, Folder, ChevronRight } from 'lucide-react'
+import type { NoteSummary } from '../../api/types'
+import { getFileUrl } from '../../utils/api'
+import clsx from 'clsx'
 
 interface NoteCardProps {
-  note: NoteSummary;
-  className?: string;
+  note: NoteSummary
+  className?: string
 }
 
 export default function NoteCard({ note, className }: NoteCardProps) {
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("ja-JP", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
+    const date = new Date(dateString)
+    return date.toLocaleDateString('ja-JP', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+  }
 
   return (
-    <Link to={`/notes/${note.id}`} className={clsx("note-card", className)}>
+    <Link to={`/notes/${note.id}`} className={clsx('note-card', className)}>
       {note.cover_file_url && (
         <div className="note-card-cover">
-          <img src={getFileUrl(note.cover_file_url) || ""} alt="" />
+          <img src={getFileUrl(note.cover_file_url) || ''} alt="" />
         </div>
       )}
 
@@ -46,6 +46,26 @@ export default function NoteCard({ note, className }: NoteCardProps) {
           </div>
         </div>
 
+        {(note.project_name || note.folder_name) && (
+          <div className="note-card-breadcrumb">
+            {note.project_name && (
+              <>
+                <FolderKanban size={12} />
+                <span>{note.project_name}</span>
+              </>
+            )}
+            {note.project_name && note.folder_name && (
+              <ChevronRight size={12} className="breadcrumb-separator" />
+            )}
+            {note.folder_name && (
+              <>
+                <Folder size={12} />
+                <span>{note.folder_name}</span>
+              </>
+            )}
+          </div>
+        )}
+
         {note.tags.length > 0 && (
           <div className="note-card-tags">
             <Tag size={12} />
@@ -54,16 +74,26 @@ export default function NoteCard({ note, className }: NoteCardProps) {
                 {tag.name}
               </span>
             ))}
-            {note.tags.length > 3 && (
-              <span className="tag-more">+{note.tags.length - 3}</span>
-            )}
+            {note.tags.length > 3 && <span className="tag-more">+{note.tags.length - 3}</span>}
           </div>
         )}
 
         <div className="note-card-footer">
+          <div className="note-card-meta">
+            {note.created_by && (
+              <span className="note-card-author">
+                <User size={12} />
+                {note.created_by}
+              </span>
+            )}
+            <span className="note-card-views">
+              <Eye size={12} />
+              {note.view_count}
+            </span>
+          </div>
           <span className="note-card-date">{formatDate(note.updated_at)}</span>
         </div>
       </div>
     </Link>
-  );
+  )
 }

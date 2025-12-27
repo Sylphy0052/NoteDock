@@ -1,1 +1,1 @@
-export { MarkdownViewer } from "./MarkdownViewer";
+export { MarkdownViewer } from './MarkdownViewer'

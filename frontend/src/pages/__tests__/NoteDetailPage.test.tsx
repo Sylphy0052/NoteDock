@@ -1,12 +1,12 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ToastProvider } from "../../components/common/Toast";
-import NoteDetailPage from "../NoteDetailPage";
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { render, screen, waitFor } from '@testing-library/react'
+import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { ToastProvider } from '../../components/common/Toast'
+import NoteDetailPage from '../NoteDetailPage'
 
 // Mock API modules
-vi.mock("../../api/notes", () => ({
+vi.mock('../../api/notes', () => ({
   getNote: vi.fn(),
   deleteNote: vi.fn(),
   toggleNotePin: vi.fn(),
@@ -14,65 +14,63 @@ vi.mock("../../api/notes", () => ({
   duplicateNote: vi.fn(),
   getNoteToc: vi.fn(),
   getNoteVersions: vi.fn(),
-}));
+}))
 
-vi.mock("../../api/comments", () => ({
+vi.mock('../../api/comments', () => ({
   getComments: vi.fn(),
   createComment: vi.fn(),
   deleteComment: vi.fn(),
-}));
+}))
 
-vi.mock("../../api/files", () => ({
+vi.mock('../../api/files', () => ({
   getFileDownloadUrl: vi.fn(),
-}));
+}))
 
 // Mock mermaid
-vi.mock("mermaid", () => ({
+vi.mock('mermaid', () => ({
   default: {
     initialize: vi.fn(),
-    render: vi.fn().mockResolvedValue({ svg: "<svg>mocked</svg>" }),
+    render: vi.fn().mockResolvedValue({ svg: '<svg>mocked</svg>' }),
   },
-}));
+}))
 
-import { getNote, getNoteToc, getNoteVersions } from "../../api/notes";
-import { getComments } from "../../api/comments";
+import { getNote, getNoteToc, getNoteVersions } from '../../api/notes'
+import { getComments } from '../../api/comments'
 
 const mockNote = {
   id: 1,
-  title: "Test Note Title",
-  content_md: "# Hello World\n\nThis is test content.",
-  folder_path: "/",
-  folder: { id: 1, name: "Documents" },
+  title: 'Test Note Title',
+  content_md: '# Hello World\n\nThis is test content.',
+  folder_path: '/',
+  folder: { id: 1, name: 'Documents' },
   is_pinned: false,
   is_readonly: false,
-  created_at: "2024-01-01T00:00:00Z",
-  updated_at: "2024-01-02T00:00:00Z",
+  created_at: '2024-01-01T00:00:00Z',
+  updated_at: '2024-01-02T00:00:00Z',
   deleted_at: null,
   version_no: 1,
-  tags: [{ id: 1, name: "test-tag" }],
+  tags: [{ id: 1, name: 'test-tag' }],
   files: [],
-};
+}
 
-const mockTocItems = [
-  { id: "hello-world", level: 1, text: "Hello World" },
-];
+const mockTocItems = [{ id: 'hello-world', level: 1, text: 'Hello World' }]
 
 const mockComments = [
   {
     id: 1,
-    display_name: "User1",
-    content: "Great note!",
-    created_at: "2024-01-02T10:00:00Z",
+    display_name: 'User1',
+    content: 'Great note!',
+    created_at: '2024-01-02T10:00:00Z',
     replies: [],
   },
-];
+]
 
-function renderWithProviders(noteId: string = "1") {
+function renderWithProviders(noteId: string = '1') {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: false },
     },
-  });
+  })
 
   return render(
     <QueryClientProvider client={queryClient}>
@@ -85,185 +83,171 @@ function renderWithProviders(noteId: string = "1") {
         </MemoryRouter>
       </ToastProvider>
     </QueryClientProvider>
-  );
+  )
 }
 
-describe("NoteDetailPage", () => {
+describe('NoteDetailPage', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-    (getNote as ReturnType<typeof vi.fn>).mockResolvedValue(mockNote);
-    (getNoteToc as ReturnType<typeof vi.fn>).mockResolvedValue(mockTocItems);
-    (getComments as ReturnType<typeof vi.fn>).mockResolvedValue(mockComments);
-    (getNoteVersions as ReturnType<typeof vi.fn>).mockResolvedValue([]);
-  });
+    vi.clearAllMocks()
+    ;(getNote as ReturnType<typeof vi.fn>).mockResolvedValue(mockNote)
+    ;(getNoteToc as ReturnType<typeof vi.fn>).mockResolvedValue(mockTocItems)
+    ;(getComments as ReturnType<typeof vi.fn>).mockResolvedValue(mockComments)
+    ;(getNoteVersions as ReturnType<typeof vi.fn>).mockResolvedValue([])
+  })
 
-  it("displays loading state initially", () => {
-    (getNote as ReturnType<typeof vi.fn>).mockImplementation(
-      () => new Promise(() => {})
-    );
-    renderWithProviders();
+  it('displays loading state initially', () => {
+    ;(getNote as ReturnType<typeof vi.fn>).mockImplementation(() => new Promise(() => {}))
+    renderWithProviders()
 
-    expect(screen.getByText("読み込み中...")).toBeInTheDocument();
-  });
+    expect(screen.getByText('読み込み中...')).toBeInTheDocument()
+  })
 
-  it("renders note title", async () => {
-    renderWithProviders();
+  it('renders note title', async () => {
+    renderWithProviders()
 
     await waitFor(() => {
       // Title appears in breadcrumb and as h1, so use getAllByText
-      const titles = screen.getAllByText("Test Note Title");
-      expect(titles.length).toBeGreaterThan(0);
+      const titles = screen.getAllByText('Test Note Title')
+      expect(titles.length).toBeGreaterThan(0)
       // Verify the main title h1 exists
-      expect(screen.getByRole("heading", { name: "Test Note Title", level: 1 })).toBeInTheDocument();
-    });
-  });
+      expect(screen.getByRole('heading', { name: 'Test Note Title', level: 1 })).toBeInTheDocument()
+    })
+  })
 
-  it("renders note content in markdown", async () => {
-    renderWithProviders();
-
-    await waitFor(() => {
-      expect(screen.getByRole("heading", { name: "Hello World" })).toBeInTheDocument();
-    });
-  });
-
-  it("shows edit button when not readonly", async () => {
-    renderWithProviders();
+  it('renders note content in markdown', async () => {
+    renderWithProviders()
 
     await waitFor(() => {
-      expect(screen.getByRole("link", { name: /編集/ })).toHaveAttribute(
-        "href",
-        "/notes/1/edit"
-      );
-    });
-  });
+      expect(screen.getByRole('heading', { name: 'Hello World' })).toBeInTheDocument()
+    })
+  })
 
-  it("hides edit button when readonly", async () => {
-    (getNote as ReturnType<typeof vi.fn>).mockResolvedValue({
+  it('shows edit button when not readonly', async () => {
+    renderWithProviders()
+
+    await waitFor(() => {
+      expect(screen.getByRole('link', { name: /編集/ })).toHaveAttribute('href', '/notes/1/edit')
+    })
+  })
+
+  it('hides edit button when readonly', async () => {
+    ;(getNote as ReturnType<typeof vi.fn>).mockResolvedValue({
       ...mockNote,
       is_readonly: true,
-    });
-    renderWithProviders();
+    })
+    renderWithProviders()
 
     await waitFor(() => {
-      expect(screen.queryByRole("link", { name: /編集/ })).not.toBeInTheDocument();
-    });
-  });
+      expect(screen.queryByRole('link', { name: /編集/ })).not.toBeInTheDocument()
+    })
+  })
 
-  it("displays tags", async () => {
-    renderWithProviders();
+  it('displays tags', async () => {
+    renderWithProviders()
 
     await waitFor(() => {
-      expect(screen.getByText("test-tag")).toBeInTheDocument();
-    });
-  });
+      expect(screen.getByText('test-tag')).toBeInTheDocument()
+    })
+  })
 
-  it("displays pinned badge when pinned", async () => {
-    (getNote as ReturnType<typeof vi.fn>).mockResolvedValue({
+  it('displays pinned badge when pinned', async () => {
+    ;(getNote as ReturnType<typeof vi.fn>).mockResolvedValue({
       ...mockNote,
       is_pinned: true,
-    });
-    renderWithProviders();
+    })
+    renderWithProviders()
 
     await waitFor(() => {
-      expect(screen.getByText("ピン留め")).toBeInTheDocument();
-    });
-  });
+      expect(screen.getByText('ピン留め')).toBeInTheDocument()
+    })
+  })
 
-  it("displays readonly badge when readonly", async () => {
-    (getNote as ReturnType<typeof vi.fn>).mockResolvedValue({
+  it('displays readonly badge when readonly', async () => {
+    ;(getNote as ReturnType<typeof vi.fn>).mockResolvedValue({
       ...mockNote,
       is_readonly: true,
-    });
-    renderWithProviders();
+    })
+    renderWithProviders()
 
     await waitFor(() => {
-      expect(screen.getByText("閲覧専用")).toBeInTheDocument();
-    });
-  });
+      expect(screen.getByText('閲覧専用')).toBeInTheDocument()
+    })
+  })
 
-  it("renders breadcrumb navigation", async () => {
-    renderWithProviders();
-
-    await waitFor(() => {
-      expect(screen.getByRole("link", { name: "ノート" })).toHaveAttribute(
-        "href",
-        "/notes"
-      );
-    });
-  });
-
-  it("displays folder in breadcrumb", async () => {
-    renderWithProviders();
+  it('renders breadcrumb navigation', async () => {
+    renderWithProviders()
 
     await waitFor(() => {
-      expect(screen.getByText("Documents")).toBeInTheDocument();
-    });
-  });
+      expect(screen.getByRole('link', { name: 'ノート' })).toHaveAttribute('href', '/notes')
+    })
+  })
 
-  it("shows error state when note not found", async () => {
-    (getNote as ReturnType<typeof vi.fn>).mockRejectedValue(
-      new Error("Not found")
-    );
-    renderWithProviders();
+  it('displays folder in breadcrumb', async () => {
+    renderWithProviders()
 
     await waitFor(() => {
-      expect(screen.getByText("ノートが見つかりません")).toBeInTheDocument();
-    });
-  });
+      expect(screen.getByText('Documents')).toBeInTheDocument()
+    })
+  })
 
-  it("shows back to list link on error", async () => {
-    (getNote as ReturnType<typeof vi.fn>).mockRejectedValue(
-      new Error("Not found")
-    );
-    renderWithProviders();
+  it('shows error state when note not found', async () => {
+    ;(getNote as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Not found'))
+    renderWithProviders()
 
     await waitFor(() => {
-      expect(
-        screen.getByRole("link", { name: "ノート一覧に戻る" })
-      ).toBeInTheDocument();
-    });
-  });
+      expect(screen.getByText('ノートが見つかりません')).toBeInTheDocument()
+    })
+  })
 
-  it("renders table of contents when available", async () => {
-    renderWithProviders();
-
-    await waitFor(() => {
-      expect(screen.getByText("目次")).toBeInTheDocument();
-    });
-  });
-
-  it("renders comment section", async () => {
-    renderWithProviders();
+  it('shows back to list link on error', async () => {
+    ;(getNote as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Not found'))
+    renderWithProviders()
 
     await waitFor(() => {
-      expect(screen.getByText(/コメント/)).toBeInTheDocument();
-    });
-  });
+      expect(screen.getByRole('link', { name: 'ノート一覧に戻る' })).toBeInTheDocument()
+    })
+  })
 
-  it("displays existing comments", async () => {
-    renderWithProviders();
-
-    await waitFor(() => {
-      expect(screen.getByText("Great note!")).toBeInTheDocument();
-      expect(screen.getByText("User1")).toBeInTheDocument();
-    });
-  });
-
-  it("shows comment form", async () => {
-    renderWithProviders();
+  it('renders table of contents when available', async () => {
+    renderWithProviders()
 
     await waitFor(() => {
-      expect(screen.getByPlaceholderText("表示名")).toBeInTheDocument();
-      expect(screen.getByPlaceholderText("コメントを入力...")).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: "投稿" })).toBeInTheDocument();
-    });
-  });
+      expect(screen.getByText('目次')).toBeInTheDocument()
+    })
+  })
 
-  it("displays updated date", async () => {
-    renderWithProviders();
+  it('renders comment section', async () => {
+    renderWithProviders()
 
     await waitFor(() => {
-      expect(screen.getByText(/更新:/)).toBeInTheDocument();
-    });
-  });
-});
+      expect(screen.getByText(/コメント/)).toBeInTheDocument()
+    })
+  })
+
+  it('displays existing comments', async () => {
+    renderWithProviders()
+
+    await waitFor(() => {
+      expect(screen.getByText('Great note!')).toBeInTheDocument()
+      expect(screen.getByText('User1')).toBeInTheDocument()
+    })
+  })
+
+  it('shows comment form', async () => {
+    renderWithProviders()
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText('表示名')).toBeInTheDocument()
+      expect(screen.getByPlaceholderText('コメントを入力...')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: '投稿' })).toBeInTheDocument()
+    })
+  })
+
+  it('displays updated date', async () => {
+    renderWithProviders()
+
+    await waitFor(() => {
+      expect(screen.getByText(/更新:/)).toBeInTheDocument()
+    })
+  })
+})

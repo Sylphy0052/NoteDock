@@ -1,27 +1,27 @@
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { MessageSquare, Send, User, X } from "lucide-react";
-import { getComments, createComment } from "../../api/comments";
-import { useDisplayName } from "../../hooks/useDisplayName";
-import { CommentItem } from "./CommentItem";
-import type { Comment } from "../../api/types";
+import { useState } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { MessageSquare, Send, User, X } from 'lucide-react'
+import { getComments, createComment } from '../../api/comments'
+import { useDisplayName } from '../../hooks/useDisplayName'
+import { CommentItem } from './CommentItem'
+import type { Comment } from '../../api/types'
 
 interface CommentSectionProps {
-  noteId: number;
+  noteId: number
 }
 
 export function CommentSection({ noteId }: CommentSectionProps) {
-  const [newComment, setNewComment] = useState("");
-  const [replyToId, setReplyToId] = useState<number | null>(null);
-  const [showNameInput, setShowNameInput] = useState(false);
-  const [tempName, setTempName] = useState("");
-  const queryClient = useQueryClient();
-  const { displayName, setDisplayName, isDefault } = useDisplayName();
+  const [newComment, setNewComment] = useState('')
+  const [replyToId, setReplyToId] = useState<number | null>(null)
+  const [showNameInput, setShowNameInput] = useState(false)
+  const [tempName, setTempName] = useState('')
+  const queryClient = useQueryClient()
+  const { displayName, setDisplayName, isDefault } = useDisplayName()
 
   const { data: comments = [], isLoading } = useQuery({
-    queryKey: ["comments", noteId],
+    queryKey: ['comments', noteId],
     queryFn: () => getComments(noteId),
-  });
+  })
 
   const createMutation = useMutation({
     mutationFn: (data: { content: string; parentId: number | null }) =>
@@ -31,56 +31,54 @@ export function CommentSection({ noteId }: CommentSectionProps) {
         parent_id: data.parentId,
       }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["comments", noteId] });
-      setNewComment("");
-      setReplyToId(null);
+      queryClient.invalidateQueries({ queryKey: ['comments', noteId] })
+      setNewComment('')
+      setReplyToId(null)
     },
-  });
+  })
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+    e.preventDefault()
     if (newComment.trim()) {
       createMutation.mutate({
         content: newComment.trim(),
         parentId: replyToId,
-      });
+      })
     }
-  };
+  }
 
   const handleSaveName = () => {
     if (tempName.trim()) {
-      setDisplayName(tempName.trim());
+      setDisplayName(tempName.trim())
     }
-    setShowNameInput(false);
-    setTempName("");
-  };
+    setShowNameInput(false)
+    setTempName('')
+  }
 
   const handleReply = (parentId: number) => {
-    setReplyToId(parentId);
+    setReplyToId(parentId)
     // Scroll to comment form
-    document
-      .querySelector(".comment-form")
-      ?.scrollIntoView({ behavior: "smooth" });
-  };
+    document.querySelector('.comment-form')?.scrollIntoView({ behavior: 'smooth' })
+  }
 
   const getReplyToComment = (): Comment | null => {
-    if (!replyToId) return null;
+    if (!replyToId) return null
 
     const findComment = (comments: Comment[]): Comment | null => {
       for (const comment of comments) {
-        if (comment.id === replyToId) return comment;
+        if (comment.id === replyToId) return comment
         if (comment.replies) {
-          const found = findComment(comment.replies);
-          if (found) return found;
+          const found = findComment(comment.replies)
+          if (found) return found
         }
       }
-      return null;
-    };
+      return null
+    }
 
-    return findComment(comments);
-  };
+    return findComment(comments)
+  }
 
-  const replyToComment = getReplyToComment();
+  const replyToComment = getReplyToComment()
 
   return (
     <div className="comment-section">
@@ -91,8 +89,8 @@ export function CommentSection({ noteId }: CommentSectionProps) {
         </h3>
         <button
           onClick={() => {
-            setTempName(displayName);
-            setShowNameInput(true);
+            setTempName(displayName)
+            setShowNameInput(true)
           }}
           className="display-name-btn"
           title="表示名を変更"
@@ -119,10 +117,7 @@ export function CommentSection({ noteId }: CommentSectionProps) {
               <button onClick={handleSaveName} className="btn btn-primary">
                 保存
               </button>
-              <button
-                onClick={() => setShowNameInput(false)}
-                className="btn btn-secondary"
-              >
+              <button onClick={() => setShowNameInput(false)} className="btn btn-secondary">
                 キャンセル
               </button>
             </div>
@@ -134,11 +129,7 @@ export function CommentSection({ noteId }: CommentSectionProps) {
         {replyToComment && (
           <div className="reply-indicator">
             <span>返信先: {replyToComment.display_name}</span>
-            <button
-              type="button"
-              onClick={() => setReplyToId(null)}
-              className="cancel-reply-btn"
-            >
+            <button type="button" onClick={() => setReplyToId(null)} className="cancel-reply-btn">
               <X size={14} />
             </button>
           </div>
@@ -147,9 +138,7 @@ export function CommentSection({ noteId }: CommentSectionProps) {
           <textarea
             value={newComment}
             onChange={(e) => setNewComment(e.target.value)}
-            placeholder={
-              replyToId ? "返信を入力..." : "コメントを入力..."
-            }
+            placeholder={replyToId ? '返信を入力...' : 'コメントを入力...'}
             className="comment-textarea"
             rows={3}
           />
@@ -183,5 +172,5 @@ export function CommentSection({ noteId }: CommentSectionProps) {
         )}
       </div>
     </div>
-  );
+  )
 }

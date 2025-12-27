@@ -1,67 +1,64 @@
-import { useState } from "react";
-import { X, FileText, Save, Loader2 } from "lucide-react";
-import { createTemplate } from "../../api/templates";
+import { useState } from 'react'
+import { X, FileText, Save, Loader2 } from 'lucide-react'
+import { createTemplate } from '../../api/templates'
 
 interface SaveAsTemplateModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  content: string;
-  defaultName?: string;
-  onSave?: () => void;
+  isOpen: boolean
+  onClose: () => void
+  content: string
+  defaultName?: string
+  onSave?: () => void
 }
 
 export function SaveAsTemplateModal({
   isOpen,
   onClose,
   content,
-  defaultName = "",
+  defaultName = '',
   onSave,
 }: SaveAsTemplateModalProps) {
-  const [name, setName] = useState(defaultName);
-  const [description, setDescription] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
+  const [name, setName] = useState(defaultName)
+  const [description, setDescription] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [isSaving, setIsSaving] = useState(false)
 
   const handleSave = async () => {
     if (!name.trim()) {
-      setError("テンプレート名を入力してください");
-      return;
+      setError('テンプレート名を入力してください')
+      return
     }
 
-    setIsSaving(true);
-    setError(null);
+    setIsSaving(true)
+    setError(null)
 
     try {
       await createTemplate({
         name: name.trim(),
         description: description.trim(),
         content: content,
-      });
-      onSave?.();
-      handleClose();
+      })
+      onSave?.()
+      handleClose()
     } catch (err) {
-      console.error("Failed to save template:", err);
-      setError("テンプレートの保存に失敗しました");
+      console.error('Failed to save template:', err)
+      setError('テンプレートの保存に失敗しました')
     } finally {
-      setIsSaving(false);
+      setIsSaving(false)
     }
-  };
+  }
 
   const handleClose = () => {
-    setName(defaultName);
-    setDescription("");
-    setError(null);
-    onClose();
-  };
+    setName(defaultName)
+    setDescription('')
+    setError(null)
+    onClose()
+  }
 
-  if (!isOpen) return null;
+  if (!isOpen) return null
 
   return (
     <div className="modal-overlay" onClick={handleClose}>
-      <div
-        className="modal save-template-modal"
-        onClick={(e) => e.stopPropagation()}
-      >
+      <div className="modal save-template-modal" onClick={(e) => e.stopPropagation()}>
         <header className="modal-header">
           <h2>
             <FileText size={20} />
@@ -103,7 +100,10 @@ export function SaveAsTemplateModal({
           <div className="form-group">
             <label>プレビュー</label>
             <div className="template-content-preview">
-              <pre>{content.slice(0, 500)}{content.length > 500 ? "..." : ""}</pre>
+              <pre>
+                {content.slice(0, 500)}
+                {content.length > 500 ? '...' : ''}
+              </pre>
             </div>
           </div>
 
@@ -119,15 +119,11 @@ export function SaveAsTemplateModal({
             onClick={handleSave}
             disabled={isSaving || !name.trim()}
           >
-            {isSaving ? (
-              <Loader2 size={16} className="animate-spin" />
-            ) : (
-              <Save size={16} />
-            )}
+            {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
             保存
           </button>
         </footer>
       </div>
     </div>
-  );
+  )
 }

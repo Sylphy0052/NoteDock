@@ -1,12 +1,12 @@
-import { ButtonHTMLAttributes, forwardRef } from "react";
-import clsx from "clsx";
+import { ButtonHTMLAttributes, forwardRef } from 'react'
+import clsx from 'clsx'
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: "primary" | "secondary" | "danger" | "ghost";
-  size?: "sm" | "md" | "lg";
-  isLoading?: boolean;
-  leftIcon?: React.ReactNode;
-  rightIcon?: React.ReactNode;
+  variant?: 'primary' | 'secondary' | 'danger' | 'ghost'
+  size?: 'sm' | 'md' | 'lg'
+  isLoading?: boolean
+  leftIcon?: React.ReactNode
+  rightIcon?: React.ReactNode
 }
 
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(
@@ -14,8 +14,8 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     {
       children,
       className,
-      variant = "primary",
-      size = "md",
+      variant = 'primary',
+      size = 'md',
       isLoading = false,
       leftIcon,
       rightIcon,
@@ -28,10 +28,10 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       <button
         ref={ref}
         className={clsx(
-          "btn",
+          'btn',
           `btn-${variant}`,
           `btn-${size}`,
-          isLoading && "btn-loading",
+          isLoading && 'btn-loading',
           className
         )}
         disabled={disabled || isLoading}
@@ -47,10 +47,10 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
           </>
         )}
       </button>
-    );
+    )
   }
-);
+)
 
-Button.displayName = "Button";
+Button.displayName = 'Button'
 
-export default Button;
+export default Button

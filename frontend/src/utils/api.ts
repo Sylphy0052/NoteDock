@@ -2,7 +2,7 @@
  * API URL utilities
  */
 
-import apiClient from "../api/client";
+import apiClient from '../api/client'
 
 /**
  * Convert a relative file URL from the API to an absolute URL
@@ -10,17 +10,17 @@ import apiClient from "../api/client";
  */
 export function getFileUrl(relativeUrl: string | null | undefined): string | null {
   if (!relativeUrl) {
-    return null;
+    return null
   }
 
   // If already absolute URL, return as is
-  if (relativeUrl.startsWith("http://") || relativeUrl.startsWith("https://")) {
-    return relativeUrl;
+  if (relativeUrl.startsWith('http://') || relativeUrl.startsWith('https://')) {
+    return relativeUrl
   }
 
   // Get API host from client baseURL (remove /api suffix)
-  const apiHost = apiClient.defaults.baseURL?.replace(/\/api$/, "") || "http://localhost:8000";
+  const apiHost = apiClient.defaults.baseURL?.replace(/\/api$/, '') || 'http://localhost:8000'
 
   // Convert relative URL to absolute
-  return `${apiHost}${relativeUrl}`;
+  return `${apiHost}${relativeUrl}`
 }

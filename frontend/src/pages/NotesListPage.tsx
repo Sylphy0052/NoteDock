@@ -1,31 +1,36 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { useSearchParams, Link } from "react-router-dom";
-import { Plus, Search, Filter, X } from "lucide-react";
-import { getNotes } from "../api/notes";
-import { getTags } from "../api/tags";
-import { getFolders } from "../api/folders";
-import { NoteCard } from "../components/notes";
-import { Pagination, TextInput } from "../components/common";
-import { NoteListSkeleton } from "../components/common/Skeleton";
-import { useStaggeredAnimation } from "../hooks/useStaggeredAnimation";
+import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { useSearchParams, Link } from 'react-router-dom'
+import { Plus, Search, Filter, X, ArrowUpDown } from 'lucide-react'
+import { getNotes } from '../api/notes'
+import { getTags } from '../api/tags'
+import { getFolders } from '../api/folders'
+import { useProjects } from '../hooks'
+import { NoteCard } from '../components/notes'
+import { Pagination, TextInput } from '../components/common'
+import { NoteListSkeleton } from '../components/common/Skeleton'
+import { useStaggeredAnimation } from '../hooks/useStaggeredAnimation'
 
 export default function NotesListPage() {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const [searchQuery, setSearchQuery] = useState(searchParams.get("q") || "");
-  const [showFilters, setShowFilters] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '')
+  const [showFilters, setShowFilters] = useState(false)
 
-  const page = parseInt(searchParams.get("page") || "1", 10);
-  const pageSize = 12;
-  const tagFilter = searchParams.get("tag") || undefined;
-  const folderFilter = searchParams.get("folder_id")
-    ? parseInt(searchParams.get("folder_id")!, 10)
-    : undefined;
-  const query = searchParams.get("q") || undefined;
+  const page = parseInt(searchParams.get('page') || '1', 10)
+  const pageSize = 12
+  const tagFilter = searchParams.get('tag') || undefined
+  const folderFilter = searchParams.get('folder_id')
+    ? parseInt(searchParams.get('folder_id')!, 10)
+    : undefined
+  const projectFilter = searchParams.get('project_id')
+    ? parseInt(searchParams.get('project_id')!, 10)
+    : undefined
+  const query = searchParams.get('q') || undefined
+  const sortBy = (searchParams.get('sort_by') as 'updated_at' | 'created_at') || 'updated_at'
 
   // Fetch notes
   const { data, isLoading } = useQuery({
-    queryKey: ["notes", { page, pageSize, query, tagFilter, folderFilter }],
+    queryKey: ['notes', { page, pageSize, query, tagFilter, folderFilter, projectFilter, sortBy }],
     queryFn: () =>
       getNotes({
         page,
@@ -33,76 +38,103 @@ export default function NotesListPage() {
         q: query,
         tag: tagFilter,
         folder_id: folderFilter,
+        project_id: projectFilter,
+        sort_by: sortBy,
       }),
-  });
+  })
 
   // Fetch tags for filter
   const { data: tags } = useQuery({
-    queryKey: ["tags"],
+    queryKey: ['tags'],
     queryFn: getTags,
-  });
+  })
 
   // Fetch folders for filter
   const { data: folders } = useQuery({
-    queryKey: ["folders"],
+    queryKey: ['folders'],
     queryFn: getFolders,
-  });
+  })
 
-  const notes = data?.items || [];
-  const total = data?.total || 0;
-  const totalPages = Math.ceil(total / pageSize);
+  // Fetch projects for filter
+  const { data: projectsData } = useProjects({ page_size: 100 })
+
+  const notes = data?.items || []
+  const total = data?.total || 0
+  const totalPages = Math.ceil(total / pageSize)
 
   // Staggered animation for note cards
   const { className: animationClass } = useStaggeredAnimation(notes.length, {
     reanimateOnChange: true,
-  });
+  })
 
   const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    const newParams = new URLSearchParams(searchParams);
+    e.preventDefault()
+    const newParams = new URLSearchParams(searchParams)
     if (searchQuery) {
-      newParams.set("q", searchQuery);
+      newParams.set('q', searchQuery)
     } else {
-      newParams.delete("q");
+      newParams.delete('q')
     }
-    newParams.set("page", "1");
-    setSearchParams(newParams);
-  };
+    newParams.set('page', '1')
+    setSearchParams(newParams)
+  }
 
   const handleTagFilter = (tagName: string | null) => {
-    const newParams = new URLSearchParams(searchParams);
+    const newParams = new URLSearchParams(searchParams)
     if (tagName) {
-      newParams.set("tag", tagName);
+      newParams.set('tag', tagName)
     } else {
-      newParams.delete("tag");
+      newParams.delete('tag')
     }
-    newParams.set("page", "1");
-    setSearchParams(newParams);
-  };
+    newParams.set('page', '1')
+    setSearchParams(newParams)
+  }
 
   const handleFolderFilter = (folderId: number | null) => {
-    const newParams = new URLSearchParams(searchParams);
+    const newParams = new URLSearchParams(searchParams)
     if (folderId) {
-      newParams.set("folder_id", folderId.toString());
+      newParams.set('folder_id', folderId.toString())
     } else {
-      newParams.delete("folder_id");
+      newParams.delete('folder_id')
     }
-    newParams.set("page", "1");
-    setSearchParams(newParams);
-  };
+    newParams.set('page', '1')
+    setSearchParams(newParams)
+  }
+
+  const handleProjectFilter = (projectId: number | null) => {
+    const newParams = new URLSearchParams(searchParams)
+    if (projectId) {
+      newParams.set('project_id', projectId.toString())
+    } else {
+      newParams.delete('project_id')
+    }
+    newParams.set('page', '1')
+    setSearchParams(newParams)
+  }
+
+  const handleSortChange = (newSortBy: 'updated_at' | 'created_at') => {
+    const newParams = new URLSearchParams(searchParams)
+    if (newSortBy === 'updated_at') {
+      newParams.delete('sort_by')
+    } else {
+      newParams.set('sort_by', newSortBy)
+    }
+    newParams.set('page', '1')
+    setSearchParams(newParams)
+  }
 
   const handlePageChange = (newPage: number) => {
-    const newParams = new URLSearchParams(searchParams);
-    newParams.set("page", newPage.toString());
-    setSearchParams(newParams);
-  };
+    const newParams = new URLSearchParams(searchParams)
+    newParams.set('page', newPage.toString())
+    setSearchParams(newParams)
+  }
 
   const clearFilters = () => {
-    setSearchQuery("");
-    setSearchParams({});
-  };
+    setSearchQuery('')
+    setSearchParams({})
+  }
 
-  const hasActiveFilters = query || tagFilter || folderFilter;
+  const hasActiveFilters = query || tagFilter || folderFilter || projectFilter
 
   return (
     <div className="notes-list-page">
@@ -127,8 +159,18 @@ export default function NotesListPage() {
             検索
           </button>
         </form>
+        <div className="sort-selector">
+          <ArrowUpDown size={16} />
+          <select
+            value={sortBy}
+            onChange={(e) => handleSortChange(e.target.value as 'updated_at' | 'created_at')}
+          >
+            <option value="updated_at">更新日順</option>
+            <option value="created_at">作成日順</option>
+          </select>
+        </div>
         <button
-          className={`btn btn-icon ${showFilters ? "active" : ""}`}
+          className={`btn btn-icon ${showFilters ? 'active' : ''}`}
           onClick={() => setShowFilters(!showFilters)}
         >
           <Filter size={18} />
@@ -140,7 +182,7 @@ export default function NotesListPage() {
           <div className="filter-group">
             <label>タグ</label>
             <select
-              value={tagFilter || ""}
+              value={tagFilter || ''}
               onChange={(e) => handleTagFilter(e.target.value || null)}
             >
               <option value="">すべてのタグ</option>
@@ -154,7 +196,7 @@ export default function NotesListPage() {
           <div className="filter-group">
             <label>フォルダ</label>
             <select
-              value={folderFilter || ""}
+              value={folderFilter || ''}
               onChange={(e) =>
                 handleFolderFilter(e.target.value ? parseInt(e.target.value, 10) : null)
               }
@@ -163,6 +205,23 @@ export default function NotesListPage() {
               {folders?.map((folder) => (
                 <option key={folder.id} value={folder.id}>
                   {folder.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="filter-group">
+            <label>プロジェクト</label>
+            <select
+              value={projectFilter || ''}
+              onChange={(e) =>
+                handleProjectFilter(e.target.value ? parseInt(e.target.value, 10) : null)
+              }
+            >
+              <option value="">すべてのプロジェクト</option>
+              {projectsData?.items.map((project) => (
+                <option key={project.id} value={project.id}>
+                  {project.company ? `${project.company.name} / ` : ''}
+                  {project.name}
                 </option>
               ))}
             </select>
@@ -181,12 +240,14 @@ export default function NotesListPage() {
           {query && (
             <span className="filter-tag">
               検索: {query}
-              <button onClick={() => {
-                setSearchQuery("");
-                const newParams = new URLSearchParams(searchParams);
-                newParams.delete("q");
-                setSearchParams(newParams);
-              }}>
+              <button
+                onClick={() => {
+                  setSearchQuery('')
+                  const newParams = new URLSearchParams(searchParams)
+                  newParams.delete('q')
+                  setSearchParams(newParams)
+                }}
+              >
                 <X size={14} />
               </button>
             </span>
@@ -203,6 +264,14 @@ export default function NotesListPage() {
             <span className="filter-tag">
               フォルダ: {folders?.find((f) => f.id === folderFilter)?.name}
               <button onClick={() => handleFolderFilter(null)}>
+                <X size={14} />
+              </button>
+            </span>
+          )}
+          {projectFilter && (
+            <span className="filter-tag">
+              プロジェクト: {projectsData?.items.find((p) => p.id === projectFilter)?.name}
+              <button onClick={() => handleProjectFilter(null)}>
                 <X size={14} />
               </button>
             </span>
@@ -235,8 +304,8 @@ export default function NotesListPage() {
           <div className="empty-state">
             <p>
               {hasActiveFilters
-                ? "条件に一致するノートが見つかりませんでした"
-                : "ノートがありません"}
+                ? '条件に一致するノートが見つかりませんでした'
+                : 'ノートがありません'}
             </p>
             {!hasActiveFilters && (
               <Link to="/notes/new" className="btn btn-primary">
@@ -247,5 +316,5 @@ export default function NotesListPage() {
         )}
       </div>
     </div>
-  );
+  )
 }

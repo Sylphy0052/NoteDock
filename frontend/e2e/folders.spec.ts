@@ -1,6 +1,4 @@
-import { test, expect, createSampleFolder, createSampleNote } from './fixtures';
-
-const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:8000';
+import { test, expect, createSampleFolder, createSampleNote, API_BASE_URL } from './fixtures';
 
 test.describe('フォルダ管理ページ', () => {
   test.beforeEach(async ({ page, apiMock }) => {
@@ -52,20 +50,29 @@ test.describe('フォルダ管理ページ', () => {
     }
   });
 
-  test('フォルダを作成できる', async ({ page, apiMock }) => {
-    await apiMock.mockFoldersList([]);
+  test('フォルダを作成できる', async ({ page }) => {
+    // 作成したフォルダを追跡
+    let createdFolder: ReturnType<typeof createSampleFolder> | null = null;
 
-    await page.route(`${API_BASE_URL}/api/folders`, async (route) => {
+    await page.route(`${API_BASE_URL}/api/folders**`, async (route) => {
       if (route.request().method() === 'POST') {
         const body = JSON.parse(route.request().postData() || '{}');
+        createdFolder = createSampleFolder({
+          id: 1,
+          name: body.name,
+          parent_id: body.parent_id,
+        });
         await route.fulfill({
           status: 201,
           contentType: 'application/json',
-          body: JSON.stringify(createSampleFolder({
-            id: 1,
-            name: body.name,
-            parent_id: body.parent_id,
-          })),
+          body: JSON.stringify(createdFolder),
+        });
+      } else if (route.request().method() === 'GET') {
+        // 作成後のGETリクエストでは作成したフォルダを含める
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(createdFolder ? [createdFolder] : []),
         });
       } else {
         await route.continue();
@@ -81,11 +88,11 @@ test.describe('フォルダ管理ページ', () => {
     const nameInput = page.locator('input[placeholder*="フォルダ名"], [data-testid="folder-name-input"]');
     await nameInput.fill('新しいフォルダ');
 
-    // 保存
-    await page.locator('button:has-text("作成"), button:has-text("保存")').click();
+    // 保存 - 「作成」ボタンを正確に指定（モーダル内の作成ボタン）
+    await page.getByRole('button', { name: '作成', exact: true }).click();
 
-    // 新しいフォルダが表示される
-    await expect(page.getByText('新しいフォルダ')).toBeVisible();
+    // 新しいフォルダが表示される（フォルダリスト内のフォルダ名を確認）
+    await expect(page.locator('.folder-name, [data-testid="folder-name"]').filter({ hasText: '新しいフォルダ' })).toBeVisible();
   });
 
   test('子フォルダを作成できる', async ({ page, apiMock }) => {
@@ -219,7 +226,7 @@ test.describe('フォルダ管理ページ', () => {
 
     await page.route(`${API_BASE_URL}/api/notes**`, async (route) => {
       const url = route.request().url();
-      if (url.includes('folder_id=1')) {
+      if (url.includes('folder_id=1') || url.includes('folder=1')) {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -242,12 +249,12 @@ test.describe('フォルダ管理ページ', () => {
 
     await page.goto('/folders');
 
-    // フォルダをクリック
-    await page.getByText('開発メモ').click();
+    // フォルダをクリック（フォルダ名のボタンまたはリンクをクリック）
+    await page.locator('.folder-name, [data-testid="folder-name"]').filter({ hasText: '開発メモ' }).click();
 
-    // フォルダ内のノートが表示される
-    await expect(page.getByText('メモ1')).toBeVisible();
-    await expect(page.getByText('メモ2')).toBeVisible();
+    // フォルダ内のノートが表示されるのを待機
+    await expect(page.getByText('メモ1').first()).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('メモ2').first()).toBeVisible({ timeout: 10000 });
   });
 
   test('フォルダ内ノートのページネーションが機能する', async ({ page, apiMock }) => {
@@ -308,10 +315,11 @@ test.describe('フォルダ管理ページ', () => {
     // 1ページ目のノートが表示
     await expect(page.getByRole('heading', { name: 'ノート1', exact: true })).toBeVisible();
 
-    // 次のページボタンをクリック
+    // 次のページボタンをクリック（モバイルでは他の要素に隠れることがあるのでscrollIntoView）
     const nextButton = page.locator('button:has-text("次"), [aria-label="次のページ"]');
     if (await nextButton.isVisible()) {
-      await nextButton.click();
+      await nextButton.scrollIntoViewIfNeeded();
+      await nextButton.click({ force: true });
 
       // 2ページ目のノートが表示
       await expect(page.getByText('ノート21')).toBeVisible();

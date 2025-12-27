@@ -1,8 +1,8 @@
-import { ReactElement } from "react";
-import { render, RenderOptions } from "@testing-library/react";
-import { BrowserRouter } from "react-router-dom";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ToastProvider } from "../components/common/Toast";
+import { ReactElement } from 'react'
+import { render, RenderOptions } from '@testing-library/react'
+import { BrowserRouter } from 'react-router-dom'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { ToastProvider } from '../components/common/Toast'
 
 // Create a new QueryClient for each test
 const createTestQueryClient = () =>
@@ -13,15 +13,15 @@ const createTestQueryClient = () =>
         gcTime: Infinity,
       },
     },
-  });
+  })
 
 interface WrapperProps {
-  children: React.ReactNode;
+  children: React.ReactNode
 }
 
 // All providers wrapper
 function AllTheProviders({ children }: WrapperProps) {
-  const queryClient = createTestQueryClient();
+  const queryClient = createTestQueryClient()
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -29,16 +29,16 @@ function AllTheProviders({ children }: WrapperProps) {
         <BrowserRouter>{children}</BrowserRouter>
       </ToastProvider>
     </QueryClientProvider>
-  );
+  )
 }
 
 // Custom render function with all providers
-function customRender(ui: ReactElement, options?: Omit<RenderOptions, "wrapper">) {
-  return render(ui, { wrapper: AllTheProviders, ...options });
+function customRender(ui: ReactElement, options?: Omit<RenderOptions, 'wrapper'>) {
+  return render(ui, { wrapper: AllTheProviders, ...options })
 }
 
 // Re-export everything from testing-library
-export * from "@testing-library/react";
+export * from '@testing-library/react'
 
 // Override render method
-export { customRender as render };
+export { customRender as render }

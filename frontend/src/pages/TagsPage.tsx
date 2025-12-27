@@ -1,50 +1,50 @@
-import { useQuery } from "@tanstack/react-query";
-import { Link, useSearchParams } from "react-router-dom";
-import { Tag, Hash } from "lucide-react";
-import { getTags } from "../api/tags";
-import { getNotes } from "../api/notes";
-import { NoteCard } from "../components/notes";
-import { Pagination } from "../components/common";
+import { useQuery } from '@tanstack/react-query'
+import { Link, useSearchParams } from 'react-router-dom'
+import { Tag, Hash } from 'lucide-react'
+import { getTags } from '../api/tags'
+import { getNotes } from '../api/notes'
+import { NoteCard } from '../components/notes'
+import { Pagination } from '../components/common'
 
 export default function TagsPage() {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const selectedTag = searchParams.get("tag");
-  const page = parseInt(searchParams.get("page") || "1", 10);
-  const pageSize = 12;
+  const [searchParams, setSearchParams] = useSearchParams()
+  const selectedTag = searchParams.get('tag')
+  const page = parseInt(searchParams.get('page') || '1', 10)
+  const pageSize = 12
 
   // Fetch all tags
   const { data: tags, isLoading: tagsLoading } = useQuery({
-    queryKey: ["tags"],
+    queryKey: ['tags'],
     queryFn: getTags,
-  });
+  })
 
   // Fetch notes for selected tag
   const { data: notesData, isLoading: notesLoading } = useQuery({
-    queryKey: ["notes", { tag: selectedTag, page, pageSize }],
+    queryKey: ['notes', { tag: selectedTag, page, pageSize }],
     queryFn: () => getNotes({ tag: selectedTag!, page, page_size: pageSize }),
     enabled: !!selectedTag,
-  });
+  })
 
   const handleTagClick = (tagName: string) => {
-    const newParams = new URLSearchParams();
-    newParams.set("tag", tagName);
-    newParams.set("page", "1");
-    setSearchParams(newParams);
-  };
+    const newParams = new URLSearchParams()
+    newParams.set('tag', tagName)
+    newParams.set('page', '1')
+    setSearchParams(newParams)
+  }
 
   const handlePageChange = (newPage: number) => {
-    const newParams = new URLSearchParams(searchParams);
-    newParams.set("page", newPage.toString());
-    setSearchParams(newParams);
-  };
+    const newParams = new URLSearchParams(searchParams)
+    newParams.set('page', newPage.toString())
+    setSearchParams(newParams)
+  }
 
   const handleClearTag = () => {
-    setSearchParams({});
-  };
+    setSearchParams({})
+  }
 
-  const notes = notesData?.items || [];
-  const total = notesData?.total || 0;
-  const totalPages = Math.ceil(total / pageSize);
+  const notes = notesData?.items || []
+  const total = notesData?.total || 0
+  const totalPages = Math.ceil(total / pageSize)
 
   return (
     <div className="tags-page">
@@ -68,7 +68,7 @@ export default function TagsPage() {
               {tags.map((tag) => (
                 <li key={tag.id}>
                   <button
-                    className={`tag-item ${selectedTag === tag.name ? "active" : ""}`}
+                    className={`tag-item ${selectedTag === tag.name ? 'active' : ''}`}
                     onClick={() => handleTagClick(tag.name)}
                   >
                     <Hash size={14} />
@@ -133,5 +133,5 @@ export default function TagsPage() {
         </main>
       </div>
     </div>
-  );
+  )
 }

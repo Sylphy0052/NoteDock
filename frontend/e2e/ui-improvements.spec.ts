@@ -172,7 +172,10 @@ test.describe('UI改善 - キーボードショートカット', () => {
     await expect(page.locator('.quick-open-overlay')).not.toBeVisible({ timeout: 5000 });
   });
 
-  test('入力フィールドでは?キーでモーダルが開かない', async ({ page }) => {
+  test('入力フィールドでは?キーでモーダルが開かない', async ({ page, isMobile }) => {
+    // サイドバーの検索フィールドはモバイルでは非表示
+    test.skip(isMobile, 'Sidebar search field is hidden on mobile');
+
     await page.goto('/');
     await page.waitForLoadState('networkidle');
 
@@ -194,7 +197,10 @@ test.describe('UI改善 - クイックオープン', () => {
     await apiMock.mockTagsList([]);
   });
 
-  test('クイックオープンボタンをクリックでモーダルが開く', async ({ page }) => {
+  test('クイックオープンボタンをクリックでモーダルが開く', async ({ page, isMobile }) => {
+    // クイックオープンボタンはサイドバー/ヘッダー内にあり、モバイルでは非表示
+    test.skip(isMobile, 'Quick open button is in sidebar which is hidden on mobile');
+
     await page.route(`${API_BASE_URL}/api/notes**`, async (route) => {
       await route.fulfill({
         status: 200,
@@ -301,6 +307,9 @@ test.describe('UI改善 - ヘッダー', () => {
 });
 
 test.describe('UI改善 - サイドバー', () => {
+  // サイドバーはモバイルでは非表示のためスキップ
+  test.skip(({ isMobile }) => isMobile, 'Sidebar is hidden on mobile');
+
   test.beforeEach(async ({ page, apiMock }) => {
     await apiMock.mockFoldersList([]);
     await apiMock.mockTagsList([]);

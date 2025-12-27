@@ -61,6 +61,9 @@ test.describe('アニメーション', () => {
   });
 
   test.describe('サイドバー折りたたみアニメーション', () => {
+    // サイドバーはモバイルでは非表示のためスキップ
+    test.skip(({ isMobile }) => isMobile, 'Sidebar is hidden on mobile');
+
     test('サイドバーが折りたたみ/展開アニメーションする', async ({ page }) => {
       await page.goto('/');
       await page.waitForLoadState('networkidle');
@@ -220,6 +223,9 @@ test.describe('アニメーション', () => {
   });
 
   test.describe('ページトランジション', () => {
+    // サイドバーのナビゲーションを使用するためモバイルではスキップ
+    test.skip(({ isMobile }) => isMobile, 'Uses sidebar navigation which is hidden on mobile');
+
     test('ページ遷移時にフェードアニメーションが適用される', async ({ page }) => {
       await page.goto('/');
       await page.waitForLoadState('networkidle');
@@ -316,6 +322,9 @@ test.describe('アニメーション', () => {
   });
 
   test.describe('ボタンアニメーション', () => {
+    // ホバーイベントはモバイルでは動作しないためスキップ
+    test.skip(({ isMobile }) => isMobile, 'Hover events do not work on mobile devices');
+
     test('ボタンにホバー/クリックエフェクトが適用される', async ({ page }) => {
       await page.goto('/');
       await page.waitForLoadState('networkidle');

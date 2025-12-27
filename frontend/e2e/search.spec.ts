@@ -364,6 +364,9 @@ test.describe('検索機能', () => {
   });
 
   test.describe('クイックオープン（Ctrl+K）', () => {
+    // クイックオープンボタンはサイドバー内にあり、モバイルでは非表示
+    test.skip(({ isMobile }) => isMobile, 'Quick open button is in sidebar which is hidden on mobile');
+
     test('Ctrl+Kでクイックオープンモーダルが開く', async ({ page, apiMock }) => {
       await apiMock.mockNotesList([]);
 

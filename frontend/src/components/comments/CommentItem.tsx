@@ -1,23 +1,16 @@
-import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import {
-  MessageSquare,
-  Edit2,
-  Trash2,
-  Check,
-  X,
-  CornerDownRight,
-} from "lucide-react";
-import { updateComment, deleteComment } from "../../api/comments";
-import type { Comment } from "../../api/types";
-import { formatDate } from "../../utils/date";
+import { useState } from 'react'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { MessageSquare, Edit2, Trash2, Check, X, CornerDownRight } from 'lucide-react'
+import { updateComment, deleteComment } from '../../api/comments'
+import type { Comment } from '../../api/types'
+import { formatDate } from '../../utils/date'
 
 interface CommentItemProps {
-  comment: Comment;
-  noteId: number;
-  currentDisplayName: string;
-  onReply: (parentId: number) => void;
-  depth?: number;
+  comment: Comment
+  noteId: number
+  currentDisplayName: string
+  onReply: (parentId: number) => void
+  depth?: number
 }
 
 export function CommentItem({
@@ -27,40 +20,40 @@ export function CommentItem({
   onReply,
   depth = 0,
 }: CommentItemProps) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [editContent, setEditContent] = useState(comment.content);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const queryClient = useQueryClient();
+  const [isEditing, setIsEditing] = useState(false)
+  const [editContent, setEditContent] = useState(comment.content)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const queryClient = useQueryClient()
 
-  const isOwner = comment.display_name === currentDisplayName;
-  const maxDepth = 3;
+  const isOwner = comment.display_name === currentDisplayName
+  const maxDepth = 3
 
   const updateMutation = useMutation({
     mutationFn: () => updateComment(comment.id, { content: editContent }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["comments", noteId] });
-      setIsEditing(false);
+      queryClient.invalidateQueries({ queryKey: ['comments', noteId] })
+      setIsEditing(false)
     },
-  });
+  })
 
   const deleteMutation = useMutation({
     mutationFn: () => deleteComment(comment.id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["comments", noteId] });
-      setShowDeleteConfirm(false);
+      queryClient.invalidateQueries({ queryKey: ['comments', noteId] })
+      setShowDeleteConfirm(false)
     },
-  });
+  })
 
   const handleSaveEdit = () => {
     if (editContent.trim()) {
-      updateMutation.mutate();
+      updateMutation.mutate()
     }
-  };
+  }
 
   const handleCancelEdit = () => {
-    setEditContent(comment.content);
-    setIsEditing(false);
-  };
+    setEditContent(comment.content)
+    setIsEditing(false)
+  }
 
   return (
     <div className={`comment-item depth-${Math.min(depth, maxDepth)}`}>
@@ -105,22 +98,14 @@ export function CommentItem({
 
       <div className="comment-actions">
         {depth < maxDepth && (
-          <button
-            onClick={() => onReply(comment.id)}
-            className="comment-action-btn"
-            title="返信"
-          >
+          <button onClick={() => onReply(comment.id)} className="comment-action-btn" title="返信">
             <CornerDownRight size={14} />
             返信
           </button>
         )}
         {isOwner && !isEditing && (
           <>
-            <button
-              onClick={() => setIsEditing(true)}
-              className="comment-action-btn"
-              title="編集"
-            >
+            <button onClick={() => setIsEditing(true)} className="comment-action-btn" title="編集">
               <Edit2 size={14} />
               編集
             </button>
@@ -172,5 +157,5 @@ export function CommentItem({
         </div>
       )}
     </div>
-  );
+  )
 }

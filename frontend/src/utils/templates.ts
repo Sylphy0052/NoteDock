@@ -1,22 +1,54 @@
 // Template types
 export interface Template {
-  id: string;
-  name: string;
-  description: string;
-  content: string;
-  isSystem: boolean;
-  createdAt: string;
+  id: string
+  name: string
+  description: string
+  content: string
+  isSystem: boolean
+  createdAt: string
 }
 
 // Storage key for user templates
-const USER_TEMPLATES_KEY = "notedock_user_templates";
+const USER_TEMPLATES_KEY = 'notedock_user_templates'
 
 // System templates (predefined)
 export const SYSTEM_TEMPLATES: Template[] = [
   {
-    id: "system-meeting",
-    name: "議事録",
-    description: "会議の議事録テンプレート",
+    id: 'system-blank',
+    name: '空白',
+    description: '空白のノート',
+    content: '',
+    isSystem: true,
+    createdAt: '2024-01-01T00:00:00Z',
+  },
+  {
+    id: 'system-weekly',
+    name: '週報',
+    description: '週次報告テンプレート',
+    content: `# 週報 xx/yy
+
+## @P
+
+- [作業内容1]
+- [作業内容2]
+
+## @P
+
+- [作業内容1]
+- [作業内容2]
+
+## other
+
+- [作業内容1]
+- [作業内容2]
+`,
+    isSystem: true,
+    createdAt: '2024-01-01T00:00:00Z',
+  },
+  {
+    id: 'system-meeting',
+    name: '議事録',
+    description: '会議の議事録テンプレート',
     content: `# 会議議事録
 
 ## 基本情報
@@ -56,12 +88,12 @@ export const SYSTEM_TEMPLATES: Template[] = [
 ## 備考
 `,
     isSystem: true,
-    createdAt: "2024-01-01T00:00:00Z",
+    createdAt: '2024-01-01T00:00:00Z',
   },
   {
-    id: "system-design",
-    name: "設計書",
-    description: "技術設計書テンプレート",
+    id: 'system-design',
+    name: '設計書',
+    description: '技術設計書テンプレート',
     content: `# 設計書
 
 ## 概要
@@ -123,12 +155,12 @@ graph TD
 -
 `,
     isSystem: true,
-    createdAt: "2024-01-01T00:00:00Z",
+    createdAt: '2024-01-01T00:00:00Z',
   },
   {
-    id: "system-research",
-    name: "調査メモ",
-    description: "技術調査・リサーチ用テンプレート",
+    id: 'system-research',
+    name: '調査メモ',
+    description: '技術調査・リサーチ用テンプレート',
     content: `# 調査メモ
 
 ## 調査概要
@@ -192,42 +224,30 @@ graph TD
 -
 `,
     isSystem: true,
-    createdAt: "2024-01-01T00:00:00Z",
+    createdAt: '2024-01-01T00:00:00Z',
   },
-  {
-    id: "system-blank",
-    name: "空白",
-    description: "空白のノート",
-    content: "",
-    isSystem: true,
-    createdAt: "2024-01-01T00:00:00Z",
-  },
-];
+]
 
 // Get all templates (system + user)
 export function getAllTemplates(): Template[] {
-  const userTemplates = getUserTemplates();
-  return [...SYSTEM_TEMPLATES, ...userTemplates];
+  const userTemplates = getUserTemplates()
+  return [...SYSTEM_TEMPLATES, ...userTemplates]
 }
 
 // Get user templates from localStorage
 export function getUserTemplates(): Template[] {
   try {
-    const stored = localStorage.getItem(USER_TEMPLATES_KEY);
-    if (!stored) return [];
-    return JSON.parse(stored);
+    const stored = localStorage.getItem(USER_TEMPLATES_KEY)
+    if (!stored) return []
+    return JSON.parse(stored)
   } catch {
-    return [];
+    return []
   }
 }
 
 // Save user template
-export function saveUserTemplate(
-  name: string,
-  description: string,
-  content: string
-): Template {
-  const templates = getUserTemplates();
+export function saveUserTemplate(name: string, description: string, content: string): Template {
+  const templates = getUserTemplates()
   const newTemplate: Template = {
     id: `user-${Date.now()}`,
     name,
@@ -235,23 +255,23 @@ export function saveUserTemplate(
     content,
     isSystem: false,
     createdAt: new Date().toISOString(),
-  };
-  templates.push(newTemplate);
-  localStorage.setItem(USER_TEMPLATES_KEY, JSON.stringify(templates));
-  return newTemplate;
+  }
+  templates.push(newTemplate)
+  localStorage.setItem(USER_TEMPLATES_KEY, JSON.stringify(templates))
+  return newTemplate
 }
 
 // Delete user template
 export function deleteUserTemplate(templateId: string): boolean {
-  const templates = getUserTemplates();
-  const filtered = templates.filter((t) => t.id !== templateId);
-  if (filtered.length === templates.length) return false;
-  localStorage.setItem(USER_TEMPLATES_KEY, JSON.stringify(filtered));
-  return true;
+  const templates = getUserTemplates()
+  const filtered = templates.filter((t) => t.id !== templateId)
+  if (filtered.length === templates.length) return false
+  localStorage.setItem(USER_TEMPLATES_KEY, JSON.stringify(filtered))
+  return true
 }
 
 // Get template by ID
 export function getTemplateById(templateId: string): Template | null {
-  const all = getAllTemplates();
-  return all.find((t) => t.id === templateId) || null;
+  const all = getAllTemplates()
+  return all.find((t) => t.id === templateId) || null
 }

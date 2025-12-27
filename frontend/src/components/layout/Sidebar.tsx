@@ -1,37 +1,47 @@
-import { NavLink } from "react-router-dom";
+import { NavLink } from 'react-router-dom'
 import {
   Home,
   FileText,
+  File,
   Tag,
   Trash2,
   Network,
   FolderTree,
   Plus,
   ChevronsLeft,
-} from "lucide-react";
+  Settings,
+  PenTool,
+  LayoutTemplate,
+  Briefcase,
+} from 'lucide-react'
 
 interface SidebarProps {
-  isCollapsed?: boolean;
-  onToggle?: () => void;
+  isCollapsed?: boolean
+  onToggle?: () => void
 }
 
 export default function Sidebar({ isCollapsed = false, onToggle }: SidebarProps) {
   const navItems = [
-    { to: "/", icon: Home, label: "ホーム" },
-    { to: "/notes", icon: FileText, label: "ノート" },
-    { to: "/tags", icon: Tag, label: "タグ" },
-    { to: "/folders", icon: FolderTree, label: "フォルダ" },
-    { to: "/trash", icon: Trash2, label: "ゴミ箱" },
-    { to: "/linkmap", icon: Network, label: "リンクマップ" },
-  ];
+    { to: '/', icon: Home, label: 'ホーム' },
+    { to: '/notes', icon: FileText, label: 'ノート' },
+    { to: '/projects', icon: Briefcase, label: 'プロジェクト' },
+    { to: '/folders', icon: FolderTree, label: 'フォルダ' },
+    { to: '/tags', icon: Tag, label: 'タグ' },
+    { to: '/files', icon: File, label: 'ファイル' },
+    { to: '/templates', icon: LayoutTemplate, label: 'テンプレート' },
+    { to: '/trash', icon: Trash2, label: 'ゴミ箱' },
+    { to: '/drawings', icon: PenTool, label: '図形描画' },
+    { to: '/linkmap', icon: Network, label: 'リンクマップ' },
+    { to: '/settings', icon: Settings, label: '設定' },
+  ]
 
   return (
-    <aside className={`sidebar ${isCollapsed ? "collapsed" : ""}`}>
+    <aside className={`sidebar ${isCollapsed ? 'collapsed' : ''}`}>
       <button
         className="sidebar-toggle"
         onClick={onToggle}
-        title={isCollapsed ? "サイドバーを展開" : "サイドバーを折りたたむ"}
-        aria-label={isCollapsed ? "サイドバーを展開" : "サイドバーを折りたたむ"}
+        title={isCollapsed ? 'サイドバーを展開' : 'サイドバーを折りたたむ'}
+        aria-label={isCollapsed ? 'サイドバーを展開' : 'サイドバーを折りたたむ'}
       >
         <ChevronsLeft size={18} />
       </button>
@@ -46,9 +56,7 @@ export default function Sidebar({ isCollapsed = false, onToggle }: SidebarProps)
             <NavLink
               key={to}
               to={to}
-              className={({ isActive }) =>
-                `nav-item ${isActive ? "active" : ""}`
-              }
+              className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
               title={label}
             >
               <Icon size={20} />
@@ -58,5 +66,5 @@ export default function Sidebar({ isCollapsed = false, onToggle }: SidebarProps)
         </div>
       </nav>
     </aside>
-  );
+  )
 }

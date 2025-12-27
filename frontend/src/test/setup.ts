@@ -1,8 +1,8 @@
-import "@testing-library/jest-dom";
-import { vi } from "vitest";
+import '@testing-library/jest-dom'
+import { vi } from 'vitest'
 
 // Mock window.matchMedia for theme tests
-Object.defineProperty(window, "matchMedia", {
+Object.defineProperty(window, 'matchMedia', {
   writable: true,
   value: vi.fn().mockImplementation((query) => ({
     matches: false,
@@ -14,7 +14,7 @@ Object.defineProperty(window, "matchMedia", {
     removeEventListener: vi.fn(),
     dispatchEvent: vi.fn(),
   })),
-});
+})
 
 // Mock localStorage
 const localStorageMock = {
@@ -22,32 +22,32 @@ const localStorageMock = {
   setItem: vi.fn(),
   removeItem: vi.fn(),
   clear: vi.fn(),
-};
-Object.defineProperty(window, "localStorage", {
+}
+Object.defineProperty(window, 'localStorage', {
   value: localStorageMock,
-});
+})
 
 // Mock IntersectionObserver
 class MockIntersectionObserver {
-  observe = vi.fn();
-  unobserve = vi.fn();
-  disconnect = vi.fn();
+  observe = vi.fn()
+  unobserve = vi.fn()
+  disconnect = vi.fn()
 }
-Object.defineProperty(window, "IntersectionObserver", {
+Object.defineProperty(window, 'IntersectionObserver', {
   writable: true,
   value: MockIntersectionObserver,
-});
+})
 
 // Mock ResizeObserver
 class MockResizeObserver {
-  observe = vi.fn();
-  unobserve = vi.fn();
-  disconnect = vi.fn();
+  observe = vi.fn()
+  unobserve = vi.fn()
+  disconnect = vi.fn()
 }
-Object.defineProperty(window, "ResizeObserver", {
+Object.defineProperty(window, 'ResizeObserver', {
   writable: true,
   value: MockResizeObserver,
-});
+})
 
 // Suppress console errors during tests
-vi.spyOn(console, "error").mockImplementation(() => {});
+vi.spyOn(console, 'error').mockImplementation(() => {})

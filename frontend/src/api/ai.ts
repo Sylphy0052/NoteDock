@@ -1,5 +1,5 @@
 /**
- * AI API functions for HEROZ ASK integration.
+ * AI API functions.
  *
  * Note: ASK API has rate limiting of 1 request per second.
  */

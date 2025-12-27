@@ -192,8 +192,10 @@ test.describe('タグページ', () => {
     await expect(page.getByRole('heading', { name: 'JSノート1', level: 3, exact: true })).toBeVisible();
 
     // 次のページボタンをクリック（ページネーションコンポーネントでは「2」ボタンを探す）
+    // モバイルでは他の要素に隠れることがあるのでscrollIntoViewIfNeededとforce: trueを使用
     const page2Button = page.locator('nav[aria-label="ページネーション"]').getByRole('button', { name: '2' });
-    await page2Button.click();
+    await page2Button.scrollIntoViewIfNeeded();
+    await page2Button.click({ force: true });
 
     // 2ページ目のノートが表示
     await expect(page.getByRole('heading', { name: 'JSノート13', level: 3, exact: true })).toBeVisible();

@@ -1,6 +1,6 @@
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useSearchParams } from "react-router-dom";
+import { useState } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useSearchParams } from 'react-router-dom'
 import {
   FolderTree,
   Folder,
@@ -10,20 +10,25 @@ import {
   Trash2,
   ChevronRight,
   ChevronDown,
-} from "lucide-react";
-import { getFolders, createFolder, updateFolder, deleteFolder } from "../api/folders";
-import { getNotes } from "../api/notes";
-import type { Folder as FolderType } from "../api/types";
-import { NoteCard } from "../components/notes";
-import { Pagination, useToast } from "../components/common";
+  Sparkles,
+  MessageCircle,
+} from 'lucide-react'
+import { getFolders, createFolder, updateFolder, deleteFolder } from '../api/folders'
+import { getNotes } from '../api/notes'
+import { checkAIStatus } from '../api/ai'
+import type { Folder as FolderType } from '../api/types'
+import { NoteCard } from '../components/notes'
+import { Pagination, useToast } from '../components/common'
+import { AIFolderSummarizeModal } from '../components/ai/AIFolderSummarizeModal'
+import { AIFolderAskPanel } from '../components/ai/AIFolderAskPanel'
 
 interface FolderItemProps {
-  folder: FolderType;
-  level: number;
-  selectedFolderId: number | null;
-  onSelect: (folderId: number) => void;
-  onEdit: (folder: FolderType) => void;
-  onDelete: (folder: FolderType) => void;
+  folder: FolderType
+  level: number
+  selectedFolderId: number | null
+  onSelect: (folderId: number) => void
+  onEdit: (folder: FolderType) => void
+  onDelete: (folder: FolderType) => void
 }
 
 function FolderItem({
@@ -34,19 +39,19 @@ function FolderItem({
   onEdit,
   onDelete,
 }: FolderItemProps) {
-  const [isExpanded, setIsExpanded] = useState(false);
-  const hasChildren = folder.children && folder.children.length > 0;
-  const isSelected = selectedFolderId === folder.id;
+  const [isExpanded, setIsExpanded] = useState(false)
+  const hasChildren = folder.children && folder.children.length > 0
+  const isSelected = selectedFolderId === folder.id
 
   const toggleExpand = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setIsExpanded(!isExpanded);
-  };
+    e.stopPropagation()
+    setIsExpanded(!isExpanded)
+  }
 
   return (
     <li className="folder-list-item">
       <div
-        className={`folder-list-button ${isSelected ? "active" : ""}`}
+        className={`folder-list-button ${isSelected ? 'active' : ''}`}
         style={{ paddingLeft: `${level * 20 + 12}px` }}
       >
         <button className="folder-select" onClick={() => onSelect(folder.id)}>
@@ -56,19 +61,15 @@ function FolderItem({
             </span>
           )}
           {!hasChildren && <span className="folder-expand-placeholder" />}
-          {isExpanded || isSelected ? (
-            <FolderOpen size={18} />
-          ) : (
-            <Folder size={18} />
-          )}
+          {isExpanded || isSelected ? <FolderOpen size={18} /> : <Folder size={18} />}
           <span className="folder-name">{folder.name}</span>
         </button>
         <div className="folder-actions">
           <button
             className="btn btn-icon btn-ghost btn-sm"
             onClick={(e) => {
-              e.stopPropagation();
-              onEdit(folder);
+              e.stopPropagation()
+              onEdit(folder)
             }}
             title="編集"
           >
@@ -77,8 +78,8 @@ function FolderItem({
           <button
             className="btn btn-icon btn-ghost btn-sm"
             onClick={(e) => {
-              e.stopPropagation();
-              onDelete(folder);
+              e.stopPropagation()
+              onDelete(folder)
             }}
             title="削除"
           >
@@ -102,146 +103,156 @@ function FolderItem({
         </ul>
       )}
     </li>
-  );
+  )
 }
 
 export default function FoldersPage() {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const selectedFolderId = searchParams.get("folder_id")
-    ? parseInt(searchParams.get("folder_id")!, 10)
-    : null;
-  const page = parseInt(searchParams.get("page") || "1", 10);
-  const pageSize = 12;
+  const [searchParams, setSearchParams] = useSearchParams()
+  const selectedFolderId = searchParams.get('folder_id')
+    ? parseInt(searchParams.get('folder_id')!, 10)
+    : null
+  const page = parseInt(searchParams.get('page') || '1', 10)
+  const pageSize = 12
 
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [editingFolder, setEditingFolder] = useState<FolderType | null>(null);
-  const [deletingFolder, setDeletingFolder] = useState<FolderType | null>(null);
-  const [folderName, setFolderName] = useState("");
-  const [parentFolderId, setParentFolderId] = useState<number | null>(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
+  const [editingFolder, setEditingFolder] = useState<FolderType | null>(null)
+  const [deletingFolder, setDeletingFolder] = useState<FolderType | null>(null)
+  const [folderName, setFolderName] = useState('')
+  const [parentFolderId, setParentFolderId] = useState<number | null>(null)
 
-  const queryClient = useQueryClient();
-  const { showToast } = useToast();
+  // AI panel states
+  const [isSummarizeModalOpen, setIsSummarizeModalOpen] = useState(false)
+  const [isAskPanelOpen, setIsAskPanelOpen] = useState(false)
+
+  const queryClient = useQueryClient()
+  const { showToast } = useToast()
+
+  // Check AI status
+  const { data: aiStatus } = useQuery({
+    queryKey: ['ai-status'],
+    queryFn: checkAIStatus,
+  })
 
   // Fetch all folders
   const { data: folders, isLoading: foldersLoading } = useQuery({
-    queryKey: ["folders"],
+    queryKey: ['folders'],
     queryFn: getFolders,
-  });
+  })
 
   // Fetch notes for selected folder
   const { data: notesData, isLoading: notesLoading } = useQuery({
-    queryKey: ["notes", { folder_id: selectedFolderId, page, pageSize }],
+    queryKey: ['notes', { folder_id: selectedFolderId, page, pageSize }],
     queryFn: () => getNotes({ folder_id: selectedFolderId!, page, page_size: pageSize }),
     enabled: !!selectedFolderId,
-  });
+  })
 
   // Create folder mutation
   const createMutation = useMutation({
     mutationFn: () => createFolder(folderName, parentFolderId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["folders"] });
-      showToast("フォルダを作成しました", "success");
-      setIsCreateModalOpen(false);
-      setFolderName("");
-      setParentFolderId(null);
+      queryClient.invalidateQueries({ queryKey: ['folders'] })
+      showToast('フォルダを作成しました', 'success')
+      setIsCreateModalOpen(false)
+      setFolderName('')
+      setParentFolderId(null)
     },
     onError: () => {
-      showToast("フォルダの作成に失敗しました", "error");
+      showToast('フォルダの作成に失敗しました', 'error')
     },
-  });
+  })
 
   // Update folder mutation
   const updateMutation = useMutation({
     mutationFn: () => updateFolder(editingFolder!.id, folderName, parentFolderId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["folders"] });
-      showToast("フォルダを更新しました", "success");
-      setEditingFolder(null);
-      setFolderName("");
-      setParentFolderId(null);
+      queryClient.invalidateQueries({ queryKey: ['folders'] })
+      showToast('フォルダを更新しました', 'success')
+      setEditingFolder(null)
+      setFolderName('')
+      setParentFolderId(null)
     },
     onError: () => {
-      showToast("フォルダの更新に失敗しました", "error");
+      showToast('フォルダの更新に失敗しました', 'error')
     },
-  });
+  })
 
   // Delete folder mutation
   const deleteMutation = useMutation({
     mutationFn: () => deleteFolder(deletingFolder!.id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["folders"] });
-      showToast("フォルダを削除しました", "success");
-      setDeletingFolder(null);
+      queryClient.invalidateQueries({ queryKey: ['folders'] })
+      showToast('フォルダを削除しました', 'success')
+      setDeletingFolder(null)
       if (selectedFolderId === deletingFolder?.id) {
-        setSearchParams({});
+        setSearchParams({})
       }
     },
     onError: () => {
-      showToast("フォルダの削除に失敗しました", "error");
+      showToast('フォルダの削除に失敗しました', 'error')
     },
-  });
+  })
 
   const handleFolderSelect = (folderId: number) => {
-    const newParams = new URLSearchParams();
+    const newParams = new URLSearchParams()
     if (selectedFolderId === folderId) {
       // Deselect
-      setSearchParams({});
+      setSearchParams({})
     } else {
-      newParams.set("folder_id", folderId.toString());
-      newParams.set("page", "1");
-      setSearchParams(newParams);
+      newParams.set('folder_id', folderId.toString())
+      newParams.set('page', '1')
+      setSearchParams(newParams)
     }
-  };
+  }
 
   const handlePageChange = (newPage: number) => {
-    const newParams = new URLSearchParams(searchParams);
-    newParams.set("page", newPage.toString());
-    setSearchParams(newParams);
-  };
+    const newParams = new URLSearchParams(searchParams)
+    newParams.set('page', newPage.toString())
+    setSearchParams(newParams)
+  }
 
   const handleClearFolder = () => {
-    setSearchParams({});
-  };
+    setSearchParams({})
+  }
 
   const openCreateModal = () => {
-    setFolderName("");
-    setParentFolderId(null);
-    setIsCreateModalOpen(true);
-  };
+    setFolderName('')
+    setParentFolderId(null)
+    setIsCreateModalOpen(true)
+  }
 
   const openEditModal = (folder: FolderType) => {
-    setFolderName(folder.name);
-    setParentFolderId(folder.parent_id);
-    setEditingFolder(folder);
-  };
+    setFolderName(folder.name)
+    setParentFolderId(folder.parent_id)
+    setEditingFolder(folder)
+  }
 
   const openDeleteModal = (folder: FolderType) => {
-    setDeletingFolder(folder);
-  };
+    setDeletingFolder(folder)
+  }
 
-  const notes = notesData?.items || [];
-  const total = notesData?.total || 0;
-  const totalPages = Math.ceil(total / pageSize);
+  const notes = notesData?.items || []
+  const total = notesData?.total || 0
+  const totalPages = Math.ceil(total / pageSize)
 
   // Get flat list of folders for parent selection
-  const flatFolders: FolderType[] = [];
+  const flatFolders: FolderType[] = []
   const flattenFolders = (items: FolderType[]) => {
     items.forEach((item) => {
-      flatFolders.push(item);
+      flatFolders.push(item)
       if (item.children) {
-        flattenFolders(item.children);
+        flattenFolders(item.children)
       }
-    });
-  };
+    })
+  }
   if (folders) {
-    flattenFolders(folders);
+    flattenFolders(folders)
   }
 
   // Get selected folder name
-  const selectedFolder = flatFolders.find((f) => f.id === selectedFolderId);
+  const selectedFolder = flatFolders.find((f) => f.id === selectedFolderId)
 
   // Build tree structure (only show root level, children are nested)
-  const rootFolders = folders?.filter((f) => f.parent_id === null) || [];
+  const rootFolders = folders?.filter((f) => f.parent_id === null) || []
 
   return (
     <div className="folders-page">
@@ -299,9 +310,31 @@ export default function FoldersPage() {
                   <Folder size={20} />
                   {selectedFolder?.name}
                 </h2>
-                <button className="btn btn-ghost btn-sm" onClick={handleClearFolder}>
-                  クリア
-                </button>
+                <div className="folders-content-actions">
+                  {aiStatus?.enabled && (
+                    <>
+                      <button
+                        className="btn btn-ghost btn-sm"
+                        onClick={() => setIsSummarizeModalOpen(true)}
+                        title="フォルダを要約"
+                      >
+                        <Sparkles size={16} />
+                        要約
+                      </button>
+                      <button
+                        className="btn btn-ghost btn-sm"
+                        onClick={() => setIsAskPanelOpen(true)}
+                        title="フォルダについて質問"
+                      >
+                        <MessageCircle size={16} />
+                        質問
+                      </button>
+                    </>
+                  )}
+                  <button className="btn btn-ghost btn-sm" onClick={handleClearFolder}>
+                    クリア
+                  </button>
+                </div>
               </div>
 
               {notesLoading ? (
@@ -366,7 +399,7 @@ export default function FoldersPage() {
                 <select
                   id="parent-folder"
                   className="input"
-                  value={parentFolderId ?? ""}
+                  value={parentFolderId ?? ''}
                   onChange={(e) =>
                     setParentFolderId(e.target.value ? parseInt(e.target.value, 10) : null)
                   }
@@ -389,7 +422,7 @@ export default function FoldersPage() {
                 onClick={() => createMutation.mutate()}
                 disabled={!folderName.trim() || createMutation.isPending}
               >
-                {createMutation.isPending ? "作成中..." : "作成"}
+                {createMutation.isPending ? '作成中...' : '作成'}
               </button>
             </div>
           </div>
@@ -421,7 +454,7 @@ export default function FoldersPage() {
                 <select
                   id="edit-parent-folder"
                   className="input"
-                  value={parentFolderId ?? ""}
+                  value={parentFolderId ?? ''}
                   onChange={(e) =>
                     setParentFolderId(e.target.value ? parseInt(e.target.value, 10) : null)
                   }
@@ -446,7 +479,7 @@ export default function FoldersPage() {
                 onClick={() => updateMutation.mutate()}
                 disabled={!folderName.trim() || updateMutation.isPending}
               >
-                {updateMutation.isPending ? "更新中..." : "更新"}
+                {updateMutation.isPending ? '更新中...' : '更新'}
               </button>
             </div>
           </div>
@@ -477,12 +510,32 @@ export default function FoldersPage() {
                 onClick={() => deleteMutation.mutate()}
                 disabled={deleteMutation.isPending}
               >
-                {deleteMutation.isPending ? "削除中..." : "削除"}
+                {deleteMutation.isPending ? '削除中...' : '削除'}
               </button>
             </div>
           </div>
         </div>
       )}
+
+      {/* AI Summarize Modal */}
+      {selectedFolderId && selectedFolder && (
+        <AIFolderSummarizeModal
+          isOpen={isSummarizeModalOpen}
+          onClose={() => setIsSummarizeModalOpen(false)}
+          folderId={selectedFolderId}
+          folderName={selectedFolder.name}
+        />
+      )}
+
+      {/* AI Ask Panel */}
+      {selectedFolderId && selectedFolder && (
+        <AIFolderAskPanel
+          folderId={selectedFolderId}
+          folderName={selectedFolder.name}
+          isOpen={isAskPanelOpen}
+          onClose={() => setIsAskPanelOpen(false)}
+        />
+      )}
     </div>
-  );
+  )
 }

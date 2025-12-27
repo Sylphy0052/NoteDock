@@ -1,17 +1,17 @@
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Clock, Eye, RotateCcw, X, ChevronLeft } from "lucide-react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import { Modal, useToast } from "../common";
-import { getNoteVersions, getNoteVersion, restoreNoteVersion } from "../../api/notes";
-import type { NoteVersionBrief, NoteVersionFull } from "../../api/types";
+import { useState } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { Clock, Eye, RotateCcw, X, ChevronLeft } from 'lucide-react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+import { Modal, useToast } from '../common'
+import { getNoteVersions, getNoteVersion, restoreNoteVersion } from '../../api/notes'
+import type { NoteVersionBrief, NoteVersionFull } from '../../api/types'
 
 interface VersionHistoryModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  noteId: number;
-  currentTitle: string;
+  isOpen: boolean
+  onClose: () => void
+  noteId: number
+  currentTitle: string
 }
 
 export function VersionHistoryModal({
@@ -20,61 +20,61 @@ export function VersionHistoryModal({
   noteId,
   currentTitle,
 }: VersionHistoryModalProps) {
-  const [selectedVersion, setSelectedVersion] = useState<NoteVersionFull | null>(null);
-  const queryClient = useQueryClient();
-  const { showToast } = useToast();
+  const [selectedVersion, setSelectedVersion] = useState<NoteVersionFull | null>(null)
+  const queryClient = useQueryClient()
+  const { showToast } = useToast()
 
   // Fetch version list
   const { data: versions, isLoading: versionsLoading } = useQuery({
-    queryKey: ["note", noteId, "versions"],
+    queryKey: ['note', noteId, 'versions'],
     queryFn: () => getNoteVersions(noteId),
     enabled: isOpen,
-  });
+  })
 
   // Fetch specific version content
   const versionQuery = useQuery({
-    queryKey: ["note", noteId, "version", selectedVersion?.version_no],
+    queryKey: ['note', noteId, 'version', selectedVersion?.version_no],
     queryFn: () => getNoteVersion(noteId, selectedVersion!.version_no),
     enabled: !!selectedVersion,
-  });
+  })
 
   // Restore version mutation
   const restoreMutation = useMutation({
     mutationFn: (versionNo: number) => restoreNoteVersion(noteId, versionNo),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["note", noteId] });
-      queryClient.invalidateQueries({ queryKey: ["notes"] });
-      showToast("バージョンを復元しました", "success");
-      onClose();
+      queryClient.invalidateQueries({ queryKey: ['note', noteId] })
+      queryClient.invalidateQueries({ queryKey: ['notes'] })
+      showToast('バージョンを復元しました', 'success')
+      onClose()
     },
     onError: () => {
-      showToast("復元に失敗しました", "error");
+      showToast('復元に失敗しました', 'error')
     },
-  });
+  })
 
   const handleViewVersion = (version: NoteVersionBrief) => {
-    setSelectedVersion(version as NoteVersionFull);
-  };
+    setSelectedVersion(version as NoteVersionFull)
+  }
 
   const handleRestore = () => {
     if (selectedVersion) {
-      restoreMutation.mutate(selectedVersion.version_no);
+      restoreMutation.mutate(selectedVersion.version_no)
     }
-  };
+  }
 
   const handleBack = () => {
-    setSelectedVersion(null);
-  };
+    setSelectedVersion(null)
+  }
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString("ja-JP", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
+    return new Date(dateString).toLocaleString('ja-JP', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+  }
 
   const renderVersionList = () => {
     if (versionsLoading) {
@@ -83,7 +83,7 @@ export function VersionHistoryModal({
           <div className="spinner" />
           <span>読み込み中...</span>
         </div>
-      );
+      )
     }
 
     if (!versions || versions.length === 0) {
@@ -93,7 +93,7 @@ export function VersionHistoryModal({
           <p>バージョン履歴がありません</p>
           <span>ノートを保存すると履歴が記録されます</span>
         </div>
-      );
+      )
     }
 
     return (
@@ -104,26 +104,21 @@ export function VersionHistoryModal({
               <span className="version-badge">v{version.version_no}</span>
               <div className="version-details">
                 <span className="version-title-text">{version.title}</span>
-                <span className="version-date-text">
-                  {formatDate(version.created_at)}
-                </span>
+                <span className="version-date-text">{formatDate(version.created_at)}</span>
               </div>
             </div>
-            <button
-              className="btn btn-sm btn-secondary"
-              onClick={() => handleViewVersion(version)}
-            >
+            <button className="btn btn-sm btn-secondary" onClick={() => handleViewVersion(version)}>
               <Eye size={14} />
               表示
             </button>
           </li>
         ))}
       </ul>
-    );
-  };
+    )
+  }
 
   const renderVersionDetail = () => {
-    const versionData = versionQuery.data;
+    const versionData = versionQuery.data
 
     if (versionQuery.isLoading) {
       return (
@@ -131,15 +126,11 @@ export function VersionHistoryModal({
           <div className="spinner" />
           <span>読み込み中...</span>
         </div>
-      );
+      )
     }
 
     if (!versionData) {
-      return (
-        <div className="version-error">
-          バージョンの読み込みに失敗しました
-        </div>
-      );
+      return <div className="version-error">バージョンの読み込みに失敗しました</div>
     }
 
     return (
@@ -151,18 +142,14 @@ export function VersionHistoryModal({
           </button>
           <div className="version-detail-meta">
             <span className="version-badge">v{versionData.version_no}</span>
-            <span className="version-date-text">
-              {formatDate(versionData.created_at)}
-            </span>
+            <span className="version-date-text">{formatDate(versionData.created_at)}</span>
           </div>
         </div>
 
         <div className="version-detail-content">
           <h3 className="version-detail-title">{versionData.title}</h3>
           <div className="version-detail-body markdown-content">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>
-              {versionData.content_md}
-            </ReactMarkdown>
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>{versionData.content_md}</ReactMarkdown>
           </div>
         </div>
 
@@ -177,8 +164,8 @@ export function VersionHistoryModal({
           </button>
         </div>
       </div>
-    );
-  };
+    )
+  }
 
   return (
     <Modal
@@ -197,5 +184,5 @@ export function VersionHistoryModal({
         {selectedVersion ? renderVersionDetail() : renderVersionList()}
       </div>
     </Modal>
-  );
+  )
 }
