@@ -8,14 +8,14 @@ from typing import Any, BinaryIO, Optional
 
 from sqlalchemy.orm import Session
 
-from app.models import Note, Folder, Tag, File
-from app.repositories.note_repo import NoteRepository
-from app.repositories.folder_repo import FolderRepository
-from app.repositories.tag_repo import TagRepository
-from app.repositories.file_repo import FileRepository
-from app.utils.s3 import get_minio_client
-from app.core.logging import log_info, log_warning, log_error
+from app.core.logging import log_error, log_info, log_warning
 from app.db.base import now_jst
+from app.models import File, Folder, Note, Tag
+from app.repositories.file_repo import FileRepository
+from app.repositories.folder_repo import FolderRepository
+from app.repositories.note_repo import NoteRepository
+from app.repositories.tag_repo import TagRepository
+from app.utils.s3 import get_minio_client
 
 
 class ImportExportService:
@@ -27,7 +27,14 @@ class ImportExportService:
         self.folder_repo = FolderRepository(db)
         self.tag_repo = TagRepository(db)
         self.file_repo = FileRepository(db)
-        self.minio_client = get_minio_client()
+        self._minio_client = None
+
+    @property
+    def minio_client(self):
+        """Lazy initialization of MinIO client."""
+        if self._minio_client is None:
+            self._minio_client = get_minio_client()
+        return self._minio_client
 
     def export_notes(
         self,
@@ -88,27 +95,33 @@ class ImportExportService:
                     try:
                         file_data = self.minio_client.download_file(file.stored_key)
                         if file_data:
-                            attachment_path = f"{note_dir}/attachments/{file.original_name}"
+                            attachment_path = (
+                                f"{note_dir}/attachments/{file.original_name}"
+                            )
                             zip_file.writestr(attachment_path, file_data)
-                            attachments.append({
-                                "original_name": file.original_name,
-                                "mime_type": file.mime_type,
-                            })
+                            attachments.append(
+                                {
+                                    "original_name": file.original_name,
+                                    "mime_type": file.mime_type,
+                                }
+                            )
                     except Exception as e:
                         log_warning(f"Failed to export attachment {file.id}: {e}")
 
                 # Add note to manifest
-                manifest["notes"].append({
-                    "id": note.id,
-                    "title": note.title,
-                    "folder_path": folder_path,
-                    "tags": [tag.name for tag in note.tags],
-                    "is_pinned": note.is_pinned,
-                    "is_readonly": note.is_readonly,
-                    "created_at": note.created_at.isoformat(),
-                    "updated_at": note.updated_at.isoformat(),
-                    "attachments": attachments,
-                })
+                manifest["notes"].append(
+                    {
+                        "id": note.id,
+                        "title": note.title,
+                        "folder_path": folder_path,
+                        "tags": [tag.name for tag in note.tags],
+                        "is_pinned": note.is_pinned,
+                        "is_readonly": note.is_readonly,
+                        "created_at": note.created_at.isoformat(),
+                        "updated_at": note.updated_at.isoformat(),
+                        "attachments": attachments,
+                    }
+                )
 
             # Write manifest
             zip_file.writestr(
@@ -149,7 +162,8 @@ class ImportExportService:
 
                 # Find all markdown files
                 md_files = [
-                    name for name in zf.namelist()
+                    name
+                    for name in zf.namelist()
                     if name.endswith(".md") and not name.startswith("__MACOSX")
                 ]
 
@@ -158,7 +172,9 @@ class ImportExportService:
                         note_result = self._import_single_note(zf, md_path, manifest)
                         if note_result["success"]:
                             result["imported_notes"] += 1
-                            result["imported_files"] += note_result.get("files_count", 0)
+                            result["imported_files"] += note_result.get(
+                                "files_count", 0
+                            )
                         else:
                             result["errors"].append(note_result["error"])
                     except Exception as e:
@@ -192,7 +208,9 @@ class ImportExportService:
 
         # Determine folder from path
         folder_path = "/".join(md_path.split("/")[:-1])
-        folder = self._get_or_create_folder_from_path(folder_path) if folder_path else None
+        folder = (
+            self._get_or_create_folder_from_path(folder_path) if folder_path else None
+        )
 
         # Get metadata from manifest
         tags: list[str] = []
@@ -275,9 +293,13 @@ class ImportExportService:
 
         parent: Optional[Folder] = None
         for part in parts:
-            folder = self.folder_repo.get_by_name_and_parent(part, parent.id if parent else None)
+            folder = self.folder_repo.get_by_name_and_parent(
+                part, parent.id if parent else None
+            )
             if not folder:
-                folder = self.folder_repo.create(name=part, parent_id=parent.id if parent else None)
+                folder = self.folder_repo.create(
+                    name=part, parent_id=parent.id if parent else None
+                )
             parent = folder
 
         return parent
@@ -325,3 +347,34 @@ class ImportExportService:
                         break
 
         return title, body
+
+    def export_single_note_as_markdown(self, note_id: int) -> tuple[str, str]:
+        """
+        Export a single note as Markdown content.
+
+        Args:
+            note_id: ID of the note to export.
+
+        Returns:
+            Tuple of (markdown_content, filename).
+            - markdown_content: frontmatter付きMarkdownテキスト
+            - filename: サニタイズ済みファイル名（.md拡張子付き）
+
+        Raises:
+            ValueError: If note not found or deleted.
+        """
+        note = self.note_repo.get_by_id(note_id)
+        if not note:
+            raise ValueError(f"Note with id {note_id} not found")
+
+        if note.deleted_at is not None:
+            raise ValueError(f"Note with id {note_id} is deleted")
+
+        # Build markdown content with frontmatter (既存メソッド活用)
+        md_content = self._build_markdown_content(note)
+
+        # Generate safe filename (既存メソッド活用)
+        filename = f"{self._sanitize_filename(note.title)}.md"
+
+        log_info(f"Exported single note id={note_id} as markdown")
+        return md_content, filename

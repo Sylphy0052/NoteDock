@@ -104,3 +104,22 @@ class FolderRepository:
             )
         result = self.db.execute(query)
         return result.scalar_one_or_none()
+
+    def get_all_descendant_ids(self, folder_id: int) -> List[int]:
+        """Get all descendant folder IDs including the folder itself.
+
+        Recursively collects IDs of the specified folder and all
+        its subfolders.
+
+        Args:
+            folder_id: The ID of the root folder.
+
+        Returns:
+            List of folder IDs including the specified folder
+            and all descendants.
+        """
+        result = [folder_id]
+        children = self.get_children(folder_id)
+        for child in children:
+            result.extend(self.get_all_descendant_ids(child.id))
+        return result

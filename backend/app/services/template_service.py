@@ -39,13 +39,6 @@ class TemplateService:
         """Update a template."""
         template = self.get_by_id(template_id)
 
-        # System templates cannot be modified by users
-        if template.is_system:
-            raise HTTPException(
-                status_code=403,
-                detail="システムテンプレートは変更できません"
-            )
-
         return self.repo.update(
             template=template,
             name=data.name,
@@ -56,12 +49,4 @@ class TemplateService:
     def delete(self, template_id: int) -> None:
         """Delete a template."""
         template = self.get_by_id(template_id)
-
-        # System templates cannot be deleted
-        if template.is_system:
-            raise HTTPException(
-                status_code=403,
-                detail="システムテンプレートは削除できません"
-            )
-
         self.repo.delete(template)

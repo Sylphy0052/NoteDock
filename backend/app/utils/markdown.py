@@ -134,3 +134,36 @@ def add_heading_ids(content: str) -> str:
     # This is meant to be used after markdown rendering
     pattern = r"<h2>([^<]+)</h2>"
     return re.sub(pattern, replace_heading, content)
+
+
+def extract_project_links(content: str) -> List[int]:
+    """Extract project IDs from @P<ID> references in content.
+
+    Pattern: @P<number> (e.g., @P1, @P42)
+    The pattern requires @ to not be preceded by alphanumeric characters
+    to avoid matching email-like patterns.
+    """
+    # Match @P<number> pattern, not part of an email or word
+    pattern = r"(?<![a-zA-Z0-9_])@P(\d+)(?!\d)"
+    matches = re.findall(pattern, content)
+    # Return unique project IDs
+    return list(set(int(m) for m in matches))
+
+
+def render_project_links(content: str, existing_ids: set[int]) -> str:
+    """Convert @P<ID> references to clickable links.
+
+    Existing projects get clickable links, nonexistent ones get invalid styling.
+    """
+    def replace_link(match: re.Match) -> str:
+        project_id = int(match.group(1))
+        if project_id in existing_ids:
+            return (
+                f'<a href="/projects/{project_id}" '
+                f'data-project-id="{project_id}" '
+                f'class="project-link">@P{project_id}</a>'
+            )
+        return f'<span class="project-link-invalid">@P{project_id}</span>'
+
+    pattern = r"(?<![a-zA-Z0-9_])@P(\d+)(?!\d)"
+    return re.sub(pattern, replace_link, content)

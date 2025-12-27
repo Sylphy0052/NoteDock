@@ -7,13 +7,17 @@ import uuid
 from app.core.config import get_settings
 from app.core.logging import log_error, log_info
 
-settings = get_settings()
+
+def _get_lazy_settings():
+    """Get settings lazily to allow environment override in tests."""
+    return get_settings()
 
 
 class MinIOClient:
     """MinIO S3-compatible storage client wrapper."""
 
     def __init__(self) -> None:
+        settings = _get_lazy_settings()
         self.client = Minio(
             settings.minio_host,
             access_key=settings.minio_access_key,

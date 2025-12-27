@@ -18,6 +18,19 @@ from app.schemas.note import (
     FolderResponse,
     FileResponse,
 )
+from app.schemas.company import (
+    CompanyBase,
+    CompanyCreate,
+    CompanyUpdate,
+    CompanyResponse,
+)
+from app.schemas.project import (
+    ProjectBase,
+    ProjectCreate,
+    ProjectUpdate,
+    ProjectResponse,
+    ProjectSummary,
+)
 
 __all__ = [
     "ErrorDetail",
@@ -36,4 +49,13 @@ __all__ = [
     "TagResponse",
     "FolderResponse",
     "FileResponse",
+    "CompanyBase",
+    "CompanyCreate",
+    "CompanyUpdate",
+    "CompanyResponse",
+    "ProjectBase",
+    "ProjectCreate",
+    "ProjectUpdate",
+    "ProjectResponse",
+    "ProjectSummary",
 ]

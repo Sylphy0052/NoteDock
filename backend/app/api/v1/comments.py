@@ -6,6 +6,7 @@ from app.db.session import get_db
 from app.services.comment_service import CommentService
 from app.services.discord_service import get_discord_service
 from app.services.activity_log_service import ActivityLogService
+from app.services.settings_service import SettingsService
 from app.repositories.note_repo import NoteRepository
 from app.schemas.comment import CommentCreate, CommentUpdate, CommentResponse
 from app.schemas.common import MessageResponse
@@ -75,23 +76,25 @@ async def create_comment(
         ip_address=get_client_ip(request),
     )
 
-    # Get note title for Discord notification
-    note_repo = NoteRepository(db)
-    note = note_repo.get_by_id(note_id)
-    note_title = note.title if note else "不明なノート"
+    # Discord notification (background task) - check settings first
+    settings_service = SettingsService(db)
+    if settings_service.is_discord_notify_on_comment_enabled():
+        # Get note title for Discord notification
+        note_repo = NoteRepository(db)
+        note = note_repo.get_by_id(note_id)
+        note_title = note.title if note else "不明なノート"
 
-    # Discord notification (background task)
-    discord_service = get_discord_service()
+        discord_service = get_discord_service()
 
-    async def send_notification() -> None:
-        await discord_service.notify_comment_posted(
-            note_id=note_id,
-            note_title=note_title,
-            display_name=comment.display_name,
-            comment_preview=comment.content,
-        )
+        async def send_notification() -> None:
+            await discord_service.notify_comment_posted(
+                note_id=note_id,
+                note_title=note_title,
+                display_name=comment.display_name,
+                comment_preview=comment.content,
+            )
 
-    background_tasks.add_task(send_notification)
+        background_tasks.add_task(send_notification)
 
     return comment_to_response(comment)
 

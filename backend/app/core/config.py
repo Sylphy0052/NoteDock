@@ -26,6 +26,17 @@ class Settings(BaseSettings):
     # Discord
     discord_webhook_url: str = ""
 
+    # Frontend
+    frontend_base_url: str = "http://localhost:3000"
+
+    # ASK API
+    ask_api_url: str = ""
+    ask_api_key: str = ""
+    ask_project_id: int = 0
+    ask_dr_project_id: int = 0  # DeepResearch用プロジェクトID
+    ask_default_model: str = "gpt-4o-mini"
+    ask_enabled: bool = False
+
     @property
     def database_url(self) -> str:
         """Get the database connection URL."""

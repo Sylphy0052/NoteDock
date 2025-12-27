@@ -310,3 +310,95 @@ class TestNoteVersions:
             assert "title" in data
             assert "content_md" in data
             assert "version_no" in data
+
+
+class TestNoteExport:
+    """Tests for note export endpoints."""
+
+    def test_export_note_as_markdown_success(
+        self, client: TestClient, sample_note_data: dict
+    ) -> None:
+        """Test exporting a note as Markdown file."""
+        # Create a note with tags
+        note_data = sample_note_data.copy()
+        note_data["tag_names"] = ["test", "export"]
+        create_response = client.post("/api/notes", json=note_data)
+        note_id = create_response.json()["id"]
+
+        # Export as markdown
+        response = client.get(f"/api/notes/{note_id}/export/md")
+
+        assert response.status_code == 200
+        assert response.headers["content-type"].startswith("text/markdown")
+        assert "content-disposition" in response.headers
+        assert ".md" in response.headers["content-disposition"]
+
+        # Verify content
+        content = response.content.decode("utf-8")
+        assert content.startswith("---")
+        assert f"title: {note_data['title']}" in content
+        assert "tags:" in content
+        assert "test" in content
+        assert "export" in content
+        assert "created_at:" in content
+        assert "updated_at:" in content
+        assert "is_pinned:" in content
+        assert "is_readonly:" in content
+        assert note_data["content_md"] in content
+
+    def test_export_note_not_found(self, client: TestClient) -> None:
+        """Test exporting non-existent note returns 404."""
+        response = client.get("/api/notes/99999/export/md")
+        assert response.status_code == 404
+
+    def test_export_deleted_note(
+        self, client: TestClient, sample_note_data: dict
+    ) -> None:
+        """Test exporting deleted note returns 404."""
+        # Create and delete a note
+        create_response = client.post("/api/notes", json=sample_note_data)
+        note_id = create_response.json()["id"]
+        client.delete(f"/api/notes/{note_id}")
+
+        # Try to export
+        response = client.get(f"/api/notes/{note_id}/export/md")
+        assert response.status_code == 404
+
+    def test_export_note_filename_sanitization(
+        self, client: TestClient
+    ) -> None:
+        """Test filename sanitization for special characters."""
+        note_data = {
+            "title": "Test/Note:With<Special>Chars",
+            "content_md": "Content",
+        }
+        create_response = client.post("/api/notes", json=note_data)
+        note_id = create_response.json()["id"]
+
+        response = client.get(f"/api/notes/{note_id}/export/md")
+
+        assert response.status_code == 200
+        content_disposition = response.headers["content-disposition"]
+        # Verify problematic chars are replaced
+        # Get the filename part from content-disposition
+        filename_part = content_disposition.split("filename=")[1].split(";")[0]
+        assert "/" not in filename_part
+        assert ":" not in filename_part
+        assert "<" not in filename_part
+        assert ">" not in filename_part
+
+    def test_export_note_japanese_filename(self, client: TestClient) -> None:
+        """Test Japanese characters in filename are properly encoded."""
+        note_data = {
+            "title": "テストノート",
+            "content_md": "日本語コンテンツ",
+        }
+        create_response = client.post("/api/notes", json=note_data)
+        note_id = create_response.json()["id"]
+
+        response = client.get(f"/api/notes/{note_id}/export/md")
+
+        assert response.status_code == 200
+        content_disposition = response.headers["content-disposition"]
+        # Verify UTF-8 encoded filename is present
+        assert "filename*=UTF-8''" in content_disposition

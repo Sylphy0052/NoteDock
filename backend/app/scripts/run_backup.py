@@ -32,7 +32,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from app.core.logging import log_info, log_error, log_warning
-from app.core.config import settings
+from app.core.config import get_settings
+
+settings = get_settings()
 
 
 # Configuration

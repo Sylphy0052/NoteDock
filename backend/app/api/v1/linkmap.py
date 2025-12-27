@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 from pydantic import BaseModel
 
 from app.db.session import get_db
@@ -14,6 +14,8 @@ class LinkNode(BaseModel):
     id: int
     title: str
     is_pinned: bool = False
+    tag_ids: List[int] = []
+    folder_id: Optional[int] = None
 
 
 class LinkEdge(BaseModel):
@@ -37,7 +39,16 @@ def get_full_linkmap(
     """全体リンクマップを取得"""
     graph = service.get_full_linkmap()
     return LinkmapResponse(
-        nodes=[LinkNode(id=n.id, title=n.title, is_pinned=n.is_pinned) for n in graph.nodes],
+        nodes=[
+            LinkNode(
+                id=n.id,
+                title=n.title,
+                is_pinned=n.is_pinned,
+                tag_ids=n.tag_ids,
+                folder_id=n.folder_id
+            )
+            for n in graph.nodes
+        ],
         edges=[LinkEdge(from_note_id=e.from_id, to_note_id=e.to_id) for e in graph.edges],
     )
 
@@ -51,6 +62,15 @@ def get_neighborhood_linkmap(
     """特定ノートの近傍リンクマップを取得"""
     graph = service.get_neighborhood_linkmap(note_id, depth=depth)
     return LinkmapResponse(
-        nodes=[LinkNode(id=n.id, title=n.title, is_pinned=n.is_pinned) for n in graph.nodes],
+        nodes=[
+            LinkNode(
+                id=n.id,
+                title=n.title,
+                is_pinned=n.is_pinned,
+                tag_ids=n.tag_ids,
+                folder_id=n.folder_id
+            )
+            for n in graph.nodes
+        ],
         edges=[LinkEdge(from_note_id=e.from_id, to_note_id=e.to_id) for e in graph.edges],
     )

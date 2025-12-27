@@ -13,11 +13,14 @@ from app.core.errors import NotFoundError, ValidationError
 # Allowed file types
 ALLOWED_EXTENSIONS = {
     # Images
-    ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg",
+    ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".bmp", ".ico",
     # Documents
-    ".pdf", ".ppt", ".pptx",
+    ".pdf",
+    ".doc", ".docx",  # Word
+    ".xls", ".xlsx",  # Excel
+    ".ppt", ".pptx",  # PowerPoint
     # Text
-    ".txt", ".md",
+    ".txt", ".md", ".json", ".csv",
 }
 
 # Max attachments per note
@@ -39,6 +42,18 @@ class FileService:
         if not file:
             raise NotFoundError("ファイル", file_id)
         return file
+
+    def list_files(
+        self,
+        search: Optional[str] = None,
+        mime_type: Optional[str] = None,
+        page: int = 1,
+        page_size: int = 20,
+    ) -> tuple[List[File], int]:
+        """List all files with pagination and filtering."""
+        return self.file_repo.get_all(
+            search=search, mime_type=mime_type, page=page, page_size=page_size
+        )
 
     def upload_file(
         self,
@@ -144,6 +159,34 @@ class FileService:
     def get_files_for_note(self, note_id: int) -> List[File]:
         """Get all files attached to a note."""
         return self.file_repo.get_files_for_note(note_id)
+
+    def attach_file_to_note(self, file_id: int, note_id: int) -> None:
+        """Attach an existing file to a note."""
+        file = self.get_file(file_id)
+        note = self.note_repo.get_by_id(note_id)
+        if not note:
+            raise NotFoundError("ノートが見つかりません")
+
+        # Check if already attached
+        if file in note.files:
+            return  # Already attached, no-op
+
+        # Check attachment limit
+        if len(note.files) >= MAX_ATTACHMENTS_PER_NOTE:
+            raise ValidationError(
+                f"添付ファイルは{MAX_ATTACHMENTS_PER_NOTE}件までです"
+            )
+
+        self.file_repo.attach_to_note(file, note)
+
+    def detach_file_from_note(self, file_id: int, note_id: int) -> None:
+        """Detach a file from a note."""
+        file = self.get_file(file_id)
+        note = self.note_repo.get_by_id(note_id)
+        if not note:
+            raise NotFoundError("ノートが見つかりません")
+
+        self.file_repo.detach_from_note(file, note)
 
     def get_file_url(self, file: File) -> str:
         """Get the download URL for a file."""

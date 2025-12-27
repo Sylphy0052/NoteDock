@@ -14,10 +14,10 @@ class TemplateRepository:
         self.db = db
 
     def get_all(self) -> list[Template]:
-        """Get all templates ordered by is_system desc, then name."""
+        """Get all templates ordered by is_system desc, then sort_order."""
         stmt = select(Template).order_by(
             Template.is_system.desc(),
-            Template.name
+            Template.sort_order
         )
         return list(self.db.execute(stmt).scalars().all())
 
@@ -27,12 +27,12 @@ class TemplateRepository:
 
     def get_system_templates(self) -> list[Template]:
         """Get only system templates."""
-        stmt = select(Template).where(Template.is_system == True).order_by(Template.name)
+        stmt = select(Template).where(Template.is_system == True).order_by(Template.sort_order)
         return list(self.db.execute(stmt).scalars().all())
 
     def get_user_templates(self) -> list[Template]:
         """Get only user-created templates."""
-        stmt = select(Template).where(Template.is_system == False).order_by(Template.name)
+        stmt = select(Template).where(Template.is_system == False).order_by(Template.sort_order)
         return list(self.db.execute(stmt).scalars().all())
 
     def create(

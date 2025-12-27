@@ -2,12 +2,14 @@ from fastapi import APIRouter, Depends, UploadFile, File, Query, Request
 from fastapi.responses import StreamingResponse, Response
 from sqlalchemy.orm import Session
 from typing import Any, Optional
+from urllib.parse import quote
 
 from app.db.session import get_db
 from app.services.file_service import FileService
 from app.services.activity_log_service import ActivityLogService
-from app.schemas.file import FileUploadResponse
+from app.schemas.file import FileUploadResponse, FileListResponse, FileResponse
 from app.schemas.common import MessageResponse
+import math
 
 
 router = APIRouter()
@@ -38,6 +40,41 @@ def file_to_response(file: Any, service: FileService) -> FileUploadResponse:
         size_bytes=file.size_bytes,
         url=service.get_file_url(file),
         preview_url=service.get_preview_url(file),
+    )
+
+
+@router.get("/files", response_model=FileListResponse)
+async def list_files(
+    search: Optional[str] = Query(None, description="ファイル名で検索"),
+    mime_type: Optional[str] = Query(None, description="MIMEタイプでフィルタ"),
+    page: int = Query(1, ge=1, description="ページ番号"),
+    page_size: int = Query(20, ge=1, le=100, description="1ページあたりの件数"),
+    service: FileService = Depends(get_file_service),
+) -> FileListResponse:
+    """ファイル一覧を取得"""
+    files, total = service.list_files(
+        search=search, mime_type=mime_type, page=page, page_size=page_size
+    )
+
+    items = [
+        FileResponse(
+            id=f.id,
+            original_name=f.original_name,
+            mime_type=f.mime_type,
+            size_bytes=f.size_bytes,
+            created_at=f.created_at,
+            url=service.get_file_url(f),
+            preview_url=service.get_preview_url(f),
+        )
+        for f in files
+    ]
+
+    return FileListResponse(
+        items=items,
+        total=total,
+        page=page,
+        page_size=page_size,
+        total_pages=math.ceil(total / page_size) if total > 0 else 0,
     )
 
 
@@ -92,11 +129,14 @@ async def preview_file(
     """ファイルをプレビュー表示用に取得（画像・PDF）"""
     content, filename, content_type = service.download_file(file_id)
 
+    # RFC 5987 encoding for non-ASCII filenames
+    encoded_filename = quote(filename, safe="")
+
     return Response(
         content=content,
         media_type=content_type,
         headers={
-            "Content-Disposition": f'inline; filename="{filename}"',
+            "Content-Disposition": f"inline; filename*=UTF-8''{encoded_filename}",
             "Cache-Control": "public, max-age=86400",  # 1 day cache
         },
     )

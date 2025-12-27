@@ -18,6 +18,39 @@ class FileRepository:
         """Get a file by ID."""
         return self.db.get(File, file_id)
 
+    def get_all(
+        self,
+        search: Optional[str] = None,
+        mime_type: Optional[str] = None,
+        page: int = 1,
+        page_size: int = 20,
+    ) -> tuple[List[File], int]:
+        """Get all files with pagination and filtering.
+
+        Returns (files, total_count).
+        """
+        query = select(File)
+
+        # Apply filters
+        if search:
+            query = query.where(File.original_name.ilike(f"%{search}%"))
+        if mime_type:
+            query = query.where(File.mime_type.like(f"{mime_type}%"))
+
+        # Get total count
+        from sqlalchemy import func
+        count_query = select(func.count()).select_from(query.subquery())
+        total = self.db.execute(count_query).scalar() or 0
+
+        # Apply pagination and ordering
+        query = query.order_by(File.created_at.desc())
+        query = query.offset((page - 1) * page_size).limit(page_size)
+
+        result = self.db.execute(query)
+        files = list(result.scalars().all())
+
+        return files, total
+
     def get_by_key(self, stored_key: str) -> Optional[File]:
         """Get a file by stored key."""
         query = select(File).where(File.stored_key == stored_key)

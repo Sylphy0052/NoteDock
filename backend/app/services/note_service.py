@@ -37,8 +37,12 @@ class NoteService:
         q: Optional[str] = None,
         tag: Optional[str] = None,
         folder_id: Optional[int] = None,
+        project_id: Optional[int] = None,
         is_pinned: Optional[bool] = None,
+        is_hidden_from_home: Optional[bool] = None,
         include_deleted: bool = False,
+        sort_by_pinned: bool = True,
+        sort_by: str = "updated_at",
     ) -> Tuple[List[Note], int]:
         """Get paginated list of notes."""
         return self.note_repo.get_list(
@@ -47,8 +51,12 @@ class NoteService:
             q=q,
             tag=tag,
             folder_id=folder_id,
+            project_id=project_id,
             is_pinned=is_pinned,
+            is_hidden_from_home=is_hidden_from_home,
             include_deleted=include_deleted,
+            sort_by_pinned=sort_by_pinned,
+            sort_by=sort_by,
         )
 
     def create_note(self, data: NoteCreate) -> Note:
@@ -60,10 +68,14 @@ class NoteService:
             title=data.title,
             content_md=data.content_md,
             folder_id=data.folder_id,
+            project_id=data.project_id,
             is_pinned=data.is_pinned,
             is_readonly=data.is_readonly,
+            is_hidden_from_home=data.is_hidden_from_home,
             cover_file_id=data.cover_file_id,
             tags=tags,
+            created_by=data.created_by,
+            updated_by=data.created_by,
         )
 
         # Create initial version
@@ -129,6 +141,15 @@ class NoteService:
         """Toggle readonly status of a note."""
         note = self.get_note(note_id)
         return self.note_repo.update(note, is_readonly=is_readonly)
+
+    def toggle_hidden_from_home(
+        self, note_id: int, is_hidden_from_home: bool
+    ) -> Note:
+        """Toggle hidden from home status of a note."""
+        note = self.get_note(note_id)
+        return self.note_repo.update(
+            note, is_hidden_from_home=is_hidden_from_home
+        )
 
     def _create_version(self, note: Note) -> NoteVersion:
         """Create a new version of the note."""
@@ -345,3 +366,11 @@ class NoteService:
         note.editing_locked_at = None
         self.db.commit()
         self.db.refresh(note)
+
+    def increment_view_count(self, note_id: int) -> Note:
+        """Increment the view count of a note."""
+        note = self.get_note(note_id)
+        note.view_count += 1
+        self.db.commit()
+        self.db.refresh(note)
+        return note

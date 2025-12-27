@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import select
-from typing import List, Set, Dict, Any
-from dataclasses import dataclass
+from typing import List, Set, Dict, Any, Optional
+from dataclasses import dataclass, field
 
 from app.models import Note, NoteLink
 from app.repositories.link_repo import LinkRepository
@@ -15,6 +15,8 @@ class GraphNode:
     id: int
     title: str
     is_pinned: bool = False
+    tag_ids: List[int] = field(default_factory=list)
+    folder_id: Optional[int] = None
 
 
 @dataclass
@@ -48,7 +50,13 @@ class LinkmapService:
         # Build node list
         note_ids = {n.id for n in notes}
         nodes = [
-            GraphNode(id=n.id, title=n.title, is_pinned=n.is_pinned)
+            GraphNode(
+                id=n.id,
+                title=n.title,
+                is_pinned=n.is_pinned,
+                tag_ids=[t.id for t in n.tags],
+                folder_id=n.folder_id
+            )
             for n in notes
         ]
 
@@ -103,7 +111,13 @@ class LinkmapService:
 
         # Build nodes
         nodes = [
-            GraphNode(id=n.id, title=n.title, is_pinned=n.is_pinned)
+            GraphNode(
+                id=n.id,
+                title=n.title,
+                is_pinned=n.is_pinned,
+                tag_ids=[t.id for t in n.tags],
+                folder_id=n.folder_id
+            )
             for n in notes
         ]
 

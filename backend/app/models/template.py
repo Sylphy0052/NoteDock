@@ -1,6 +1,6 @@
 """Template model for storing note templates."""
 
-from sqlalchemy import String, Text, Boolean
+from sqlalchemy import String, Text, Boolean, Integer
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base, TimestampMixin
@@ -16,6 +16,7 @@ class Template(Base, TimestampMixin):
     description: Mapped[str] = mapped_column(String(500), nullable=False, default="")
     content: Mapped[str] = mapped_column(Text, nullable=False, default="")
     is_system: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=100)
 
     def __repr__(self) -> str:
         return f"<Template(id={self.id}, name={self.name}, is_system={self.is_system})>"

@@ -85,7 +85,7 @@ class DiscordService:
         self,
         note_id: int,
         title: str,
-        base_url: str = "http://localhost:3000",
+        base_url: Optional[str] = None,
     ) -> bool:
         """
         Send notification for new note creation.
@@ -95,6 +95,9 @@ class DiscordService:
             title: Title of the note
             base_url: Base URL of the application
         """
+        if base_url is None:
+            base_url = self.settings.frontend_base_url
+
         return await self._send_webhook(
             title="📝 新しいノートが作成されました",
             description=f"**{title}**",
@@ -109,7 +112,7 @@ class DiscordService:
         self,
         note_id: int,
         title: str,
-        base_url: str = "http://localhost:3000",
+        base_url: Optional[str] = None,
     ) -> bool:
         """
         Send notification for note update.
@@ -119,6 +122,9 @@ class DiscordService:
             title: Title of the note
             base_url: Base URL of the application
         """
+        if base_url is None:
+            base_url = self.settings.frontend_base_url
+
         return await self._send_webhook(
             title="✏️ ノートが更新されました",
             description=f"**{title}**",
@@ -135,7 +141,7 @@ class DiscordService:
         note_title: str,
         display_name: str,
         comment_preview: str,
-        base_url: str = "http://localhost:3000",
+        base_url: Optional[str] = None,
     ) -> bool:
         """
         Send notification for new comment.
@@ -147,6 +153,9 @@ class DiscordService:
             comment_preview: First part of the comment
             base_url: Base URL of the application
         """
+        if base_url is None:
+            base_url = self.settings.frontend_base_url
+
         # Truncate comment preview if too long
         if len(comment_preview) > 100:
             comment_preview = comment_preview[:97] + "..."
